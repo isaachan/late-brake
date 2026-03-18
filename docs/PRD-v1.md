@@ -120,33 +120,16 @@ $ late-brake compare data1.vbo 3 data2.nmea 2 --json
 
 ## 5. 数据格式
 
-### 5.1 内部统一数据格式
+Late Brake 将不同来源的圈速数据转换为统一的内部JSON数据结构，便于后续处理和分析。完整的数据结构定义请参考：  
+[数据格式文档](./data-format.md)。
 
-每个数据点包含：
-```json
-{
-  "timestamp": float,    // 相对时间（秒）
-  "latitude": float,     // 纬度
-  "longitude": float,    // 经度
-  "speed": float,        // 速度 (km/h 或 m/s，需统一单位)
-  "distance": float,     // 累计距离（米）
-}
-```
+概述：
+- **数据点结构**：每个采样点包含时间、GPS坐标、速度、距离，以及可选的G值、油门、刹车等传感器数据
+- **单圈结构**：每个单圈包含圈速、起止位置、完整状态，以及所有数据点数组
 
-### 5.2 单圈（Lap）数据结构
-```json
-{
-  "id": string,              // Lap ID (如 "file1.Lap1")
-  "source_file": string,     // 源文件路径
-  "lap_number": int,         // 圈号
-  "total_time": float,       // 总圈时（秒）
-  "start_distance": float,   // 起始距离
-  "end_distance": float,     // 结束距离
-  "points": array,           // 数据点数组
-}
-```
 
-### 5.3 支持的输入格式
+## 6. 支持的输入文件格式
+v1支持 NMEA 和 VBO 格式，后续将支持更多格式
 
 | 格式 | 说明 | 状态 |
 |------|------|------|
@@ -155,16 +138,17 @@ $ late-brake compare data1.vbo 3 data2.nmea 2 --json
 | CSV  | 通用CSV | 后续迭代 |
 | AIM  | AiM记录仪格式 | 后续迭代 |
 
-## 6. 输出格式规范
 
-### 6.1 JSON输出要求
+## 7. 输出格式规范
+
+### 7.1 JSON输出要求
 
 - 所有命令都支持 `--json` 参数输出JSON格式
 - JSON输出到stdout，便于管道传递给其他程序
 - 结构清晰，字段语义明确
 - 支持机器解析，便于后续自动化处理
 
-### 6.2 后续迭代方向
+### 7.2 后续迭代方向
 
 v1 之后考虑：
 
