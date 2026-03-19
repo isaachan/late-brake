@@ -1,0 +1,112 @@
+digraph LateBrakeUserStories {
+    rankdir=TB;
+    node [shape=box, style=filled, fillcolor=lightblue, fontsize=10];
+    
+    // 风格定义
+    // 实线 = 强依赖：前者不做，后者无法开始
+    // 虚线 = 弱依赖：前者不做，后者也可以开始，只是功能不完整
+
+    // ========== 第一层：文档规范（已完成） ==========
+    subgraph cluster_0 {
+        label="Layer 1 - 文档规范";
+        US021 [label="US-021\n定义赛道JSON格式", fillcolor=lightgreen];
+        US022 [label="US-022\n定义内部数据格式", fillcolor=lightgreen];
+    }
+
+    // ========== 第二层：核心基础设施 ==========
+    subgraph cluster_1 {
+        label="Layer 2 - 基础设施";
+        US003 [label="US-003\n统一内部数据格式"];
+        US013 [label="US-013\n赛道管理CLI框架"];
+        US010 [label="US-010\n单次执行退出模式"];
+        US011 [label="US-011\n默认文本输出"];
+        US012 [label="US-012\nJSON输出支持"];
+    }
+
+    // ========== 第三层：数据导入 ==========
+    subgraph cluster_2 {
+        label="Layer 3 - 数据导入";
+        US001 [label="US-001\n导入NMEA格式"];
+        US002 [label="US-002\n导入VBO格式", fillcolor=wheat];
+        US030 [label="US-030\nGPS平滑滤波", fillcolor=wheat];
+        US004 [label="US-004\n批量导入多文件"];
+    }
+
+    // ========== 第四层：赛道管理 ==========
+    subgraph cluster_3 {
+        label="Layer 4 - 赛道管理";
+        US014 [label="US-014\n列出所有赛道"];
+        US015 [label="US-015\n查看赛道详情"];
+        US016 [label="US-016\n添加/更新赛道"];
+        US019 [label="US-019\n内置常见赛道", fillcolor=wheat];
+        US017 [label="US-017\n自动赛道匹配"];
+        US018 [label="US-018\n--track手动指定"];
+    }
+
+    // ========== 第五层：圈分割与展示 ==========
+    subgraph cluster_4 {
+        label="Layer 5 - 圈分割";
+        US005 [label="US-005\n自动圈速分割"];
+        US006 [label="US-006\n显示圈速列表"];
+    }
+
+    // ========== 第六层：顶层命令 ==========
+    subgraph cluster_5 {
+        label="Layer 6 - 顶层命令";
+        US031 [label="US-031\nlate-brake load"];
+    }
+
+    // ========== 第七层：对比功能 ==========
+    subgraph cluster_6 {
+        label="Layer 7 - 对比分析";
+        US007 [label="US-007\n对比任意两圈"];
+        US008 [label="US-008\n显示总圈时差"];
+        US009 [label="US-009\n分段时间差"];
+        US020 [label="US-020\n速度差异对比", fillcolor=wheat];
+    }
+
+    // ========== 依赖关系 ==========
+
+    // 强依赖：实线
+    US022 -> US003 [style=solid];
+    US021 -> US013 [style=solid];
+    
+    US003 -> US001 [style=solid];
+    US003 -> US004 [style=solid];
+    US001 -> US004 [style=solid];
+    
+    US013 -> US014 [style=solid];
+    US013 -> US015 [style=solid];
+    US013 -> US016 [style=solid];
+    US021 -> US016 [style=solid];
+    
+    US004 -> US005 [style=solid];
+    US017 -> US005 [style=solid];
+    US005 -> US006 [style=solid];
+    
+    US006 -> US031 [style=solid];
+    US017 -> US031 [style=solid];
+    US018 -> US031 [style=solid];
+    
+    US031 -> US007 [style=solid];
+    US007 -> US008 [style=solid];
+    US008 -> US009 [style=solid];
+    US009 -> US020 [style=solid];
+
+    // 所有CLI命令都依赖输出基础设施（强依赖）
+    US010 -> US031 [style=solid];
+    US011 -> US031 [style=solid];
+    US012 -> US031 [style=solid];
+    US010 -> US007 [style=solid];
+    US011 -> US007 [style=solid];
+    US012 -> US007 [style=solid];
+    US010 -> US013 [style=solid];
+    US011 -> US014 [style=solid];
+    US012 -> US014 [style=solid];
+
+    // 弱依赖：虚线
+    US003 -> US002 [style=dashed];  // VBO可以后做，不影响NMEA开发
+    US003 -> US030 [style=dashed];  // 平滑可以后做，先支持原始数据
+    US016 -> US017 [style=dashed]; // 自动匹配可以后做，先手动指定
+    US016 -> US019 [style=dashed]; // 内置赛道可以后加，不影响自定义功能
+}
