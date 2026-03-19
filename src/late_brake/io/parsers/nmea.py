@@ -13,7 +13,6 @@ US-001 验收条件：
 6. ✓ 保留原始时间戳，计算累计距离字段正确
 """
 
-import re
 from typing import List, Optional
 from geographiclib.geodesic import Geodesic
 
@@ -45,10 +44,11 @@ def parse_nmea_coord(coord_str: str, direction: str) -> float:
     return decimal
 
 
-def parse_nmea_file(file_path: str) -> List[DataPoint]:
+def parse_nmea_file(file_path: str) -> Optional[List[DataPoint]]:
     """
     解析NMEA格式文件，返回DataPoint列表
     跳过错误和不完整的语句，只保留有效的GPRMC数据点
+    文件不存在返回 None
     """
     points: List[DataPoint] = []
     start_time: Optional[float] = None
@@ -56,112 +56,100 @@ def parse_nmea_file(file_path: str) -> List[DataPoint]:
     last_lon: Optional[float] = None
     total_distance: float = 0.0
 
-    with open(file_path, "r", encoding="ascii", errors="replace") as f:
-        for line_num, line in enumerate(f, 1):
-            line = line.strip()
-            if not line:
-                continue
-
-            # NMEA语句必须以$开头
-            if not line.startswith('$'):
-                continue
-
-            # 校验和检查
-            if '*' in line:
-                content, checksum_str = line.split('*', 1)
-                # 这里我们不验证校验和，只跳过格式完全错误的行
-                # 实际使用中大部分文件校验和都是对的，跳过不影响
-                line = content[1:]  # 去掉开头$
-            else:
-                line = line[1:]
-
-            parts = line.split(',')
-            if not parts:
-                continue
-
-            sentence_type = parts[0]
-
-            # 我们只需要GPRMC，它包含了我们需要的所有信息
-            if sentence_type == 'GPRMC':
-                # $GPRMC格式:
-                # 0: 语句类型 (GPRMC)
-                # 1: UTC时间 (hhmmss.ss)
-                # 2: 定位状态 (A=有效, V=无效)
-                # 3: 纬度 (ddmm.mmmmm)
-                # 4: N/S
-                # 5: 经度 (dddmm.mmmmm)
-                # 6: E/W
-                # 7: 地面速率 (节)
-                # 8: 航向 (度)
-                # 9: UTC日期 (ddmmyy)
-                # 10: 磁偏角
-                # 11: 磁偏角方向
-                # 12: 模式指示 *校验和
-                if len(parts) < 10:
-                    continue  # 不完整语句，跳过
-
-                status = parts[2]
-                if status != 'A':
-                    continue  # 无效定位，跳过
-
-                try:
-                    # 解析时间
-                    time_str = parts[1]
-                    if len(time_str) >= 6:
-                        hours = int(time_str[0:2])
-                        minutes = int(time_str[2:4])
-                        seconds = float(time_str[4:])
-                        utc_seconds = hours * 3600 + minutes * 60 + seconds
-                    else:
-                        utc_seconds = float(time_str) if time_str else 0
-
-                    # 我们使用相对时间，从第一个点开始计时
-                    if start_time is None:
-                        start_time = utc_seconds
-                    timestamp = utc_seconds - start_time
-
-                    # 解析纬度
-                    lat_str = parts[3]
-                    lat_dir = parts[4]
-                    lat = parse_nmea_coord(lat_str, lat_dir)
-
-                    # 解析经度
-                    lon_str = parts[5]
-                    lon_dir = parts[6]
-                    lon = parse_nmea_coord(lon_str, lon_dir)
-
-                    # 解析速度（节 -> km/h）
-                    speed_knots = float(parts[7]) if parts[7] else 0.0
-                    speed_kmh = speed_knots * 1.852  # 1节 = 1.852 km/h
-
-                    # 计算累计距离
-                    if last_lat is not None and last_lon is not None:
-                        result = geod.Inverse(last_lat, last_lon, lat, lon)
-                        distance_step = result["s12"]
-                        total_distance += distance_step
-                    else:
-                        distance_step = 0.0
-                        total_distance = 0.0
-
-                    # 更新上一个点
-                    last_lat = lat
-                    last_lon = lon
-
-                    # 创建数据点
-                    point = DataPoint(
-                        timestamp=timestamp,
-                        latitude=lat,
-                        longitude=lon,
-                        speed=speed_kmh,
-                        distance=total_distance
-                    )
-                    points.append(point)
-
-                except (ValueError, IndexError) as e:
-                    # 解析错误，跳过这一行
+    try:
+        with open(file_path, "r", encoding="ascii", errors="replace") as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if not line:
                     continue
+
+                # NMEA语句必须以$开头
+                if not line.startswith('$'):
+                    continue
+
+                # 校验和检查
+                if '*' in line:
+                    content, checksum_str = line.split('*', 1)
+                    # 这里我们不验证校验和，只跳过格式完全错误的行
+                    # 实际使用中大部分文件校验和都是对的，跳过不影响
+                    line = content[1:]  # 去掉开头$
+                else:
+                    line = line[1:]
+
+                parts = line.split(',')
+                if not parts:
+                    continue
+
+                sentence_type = parts[0]
+
+                # 我们只需要GPRMC，它包含了我们需要的所有信息
+                if sentence_type == 'GPRMC':
+                    if len(parts) < 10:
+                        continue  # 不完整语句，跳过
+
+                    status = parts[2]
+                    if status != 'A':
+                        continue  # 无效定位，跳过
+
+                    try:
+                        # 解析时间
+                        time_str = parts[1]
+                        if len(time_str) >= 6:
+                            hours = int(time_str[0:2])
+                            minutes = int(time_str[2:4])
+                            seconds = float(time_str[4:])
+                            utc_seconds = hours * 3600 + minutes * 60 + seconds
+                        else:
+                            utc_seconds = float(time_str) if time_str else 0
+
+                        # 我们使用相对时间，从第一个点开始计时
+                        if start_time is None:
+                            start_time = utc_seconds
+                        timestamp = utc_seconds - start_time
+
+                        # 解析纬度
+                        lat_str = parts[3]
+                        lat_dir = parts[4]
+                        lat = parse_nmea_coord(lat_str, lat_dir)
+
+                        # 解析经度
+                        lon_str = parts[5]
+                        lon_dir = parts[6]
+                        lon = parse_nmea_coord(lon_str, lon_dir)
+
+                        # 解析速度（节 -> km/h）
+                        speed_knots = float(parts[7]) if parts[7] else 0.0
+                        speed_kmh = speed_knots * 1.852  # 1节 = 1.852 km/h
+
+                        # 计算累计距离
+                        if last_lat is not None and last_lon is not None:
+                            result = geod.Inverse(last_lat, last_lon, lat, lon)
+                            distance_step = result["s12"]
+                            total_distance += distance_step
+                        else:
+                            total_distance = 0.0
+
+                        # 更新上一个点
+                        last_lat = lat
+                        last_lon = lon
+
+                        # 创建数据点
+                        point = DataPoint(
+                            timestamp=timestamp,
+                            latitude=lat,
+                            longitude=lon,
+                            speed=speed_kmh,
+                            distance=total_distance
+                        )
+                        points.append(point)
+
+                    except (ValueError, IndexError) as e:
+                        # 解析错误，跳过这一行
+                        continue
 
             # GPVTG 包含地面航向，但我们暂时不需要，其他字段已经在GPRMC有了
             # 后续如果需要可以添加
 
-    return points
+        return points if points else None
+    except FileNotFoundError:
+        return None

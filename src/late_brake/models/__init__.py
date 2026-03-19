@@ -13,12 +13,13 @@ US-003 完成验收条件：
 
 from .point import DataPoint
 from .lap import Lap
-from .track import Track, TrackSector, TrackTurn
+from .track import Track, TrackAnchor, TrackSector, TrackTurn
 
 __all__ = [
     "DataPoint",
     "Lap",
     "Track",
+    "TrackAnchor",
     "TrackSector",
     "TrackTurn",
 ]
