@@ -139,6 +139,110 @@ def track_add(track_json_file: str):
 cli.add_command(track_group)
 
 
+@click.command(name="load")
+@click.argument("data_files", nargs=-1, required=True)
+@click.option("--track", "track_id", default=None, help="手动指定赛道ID")
+@click.option("--json", "output_json", is_flag=True, default=False, help="输出JSON格式")
+def load_command(data_files, track_id, output_json):
+    """加载数据文件，自动匹配赛道并分割圈速，输出圈速列表"""
+    from late_brake.io.parsers import parse_file
+    from late_brake.core.matcher import match_track
+    from late_brake.io.track_store import get_track_by_id
+    from late_brake.core.splitter import split_laps
+
+    results = []
+    any_failed = False
+
+    for file_path in data_files:
+        result = {
+            "path": file_path,
+            "success": False,
+            "lap_count": 0,
+            "laps": [],
+            "error": None,
+        }
+
+        # 解析文件
+        points = parse_file(file_path)
+        if points is None or len(points) == 0:
+            result["error"] = "无法解析文件或没有有效数据点"
+            results.append(result)
+            any_failed = True
+            continue
+
+        # 获取赛道
+        if track_id is not None:
+            track = get_track_by_id(track_id)
+            if track is None:
+                result["error"] = f"指定的赛道ID '{track_id}' 不存在"
+                results.append(result)
+                any_failed = True
+                continue
+            match_msg = f"手动指定赛道: {track.id}"
+        else:
+            # 自动匹配
+            track, match_msg = match_track(points)
+            if track is None:
+                result["error"] = match_msg
+                results.append(result)
+                any_failed = True
+                continue
+
+        # 分割圈速
+        laps = split_laps(points, track, file_path)
+        if not laps:
+            result["error"] = "未能检测到任何圈速，请检查赛道是否正确"
+            results.append(result)
+            any_failed = True
+            continue
+
+        result["success"] = True
+        result["lap_count"] = len(laps)
+        result["laps"] = [
+            {
+                "number": lap.lap_number,
+                "time": lap.total_time,
+                "is_complete": lap.is_complete,
+            }
+            for lap in laps
+        ]
+        result["track_id"] = track.id
+        result["track_name"] = track.name
+        results.append(result)
+
+    # 输出
+    if output_json:
+        click.echo(json.dumps({
+            "files": results
+        }, indent=2, ensure_ascii=False))
+    else:
+        click.echo()
+        for res in results:
+            click.echo(f"文件: {res['path']}")
+            if not res["success"]:
+                click.echo(f"  错误: {res['error']}")
+            else:
+                click.echo(f"  赛道: {res['track_id']} - {res['track_name']}")
+                click.echo(f"  共 {res['lap_count']} 圈")
+                for lap in res["laps"]:
+                    mark = "" if lap["is_complete"] else " (不完整)"
+                    minutes = int(lap["time"] // 60)
+                    seconds = lap["time"] % 60
+                    if minutes > 0:
+                        time_str = f"{minutes}:{seconds:06.3f}"
+                    else:
+                        time_str = f"{seconds:.3f}"
+                    click.echo(f"  Lap {lap['number']}: {time_str}{mark}")
+            click.echo()
+
+    if any_failed:
+        raise SystemExit(1)
+
+
+# 注册子命令
+cli.add_command(load_command)
+
+
 def main():
     """CLI入口点，单次执行后退出（US-010）"""
     cli()
