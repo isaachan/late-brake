@@ -1,106 +1,31 @@
-﻿ID,User Story,Priority,Remark,Acceptance Condition,Type,Status
-US-001,"As a CLI user, I want to import NMEA format GPS data files, so that I can process my NMEA recorded lap data.",High,支持标准NMEA 0183格式GPS数据解析，提取时间、坐标、速度信息,"1. 命令行支持 import nmea <file> 命令格式
-2. 能够正确解析标准NMEA 0183格式文件中的RMC/GGA语句
-3. 成功提取每条记录的时间戳、纬度、经度、地面速率（速度）信息
-4. 解析完成后输出成功导入的点数量
-5. 对于非法格式文件，给出清晰错误提示并返回非零退出码
-6. 输出数据结构包含所有必要字段供后续处理",Business Story,Backlog
-US-002,"As a CLI user, I want to import VBO (VBox) format data files, so that I can process my VBox recorded lap data.",High,支持VBox输出的VBO格式解析，提取完整传感器数据,"1. 命令行支持 import vbo <file> 命令格式
-2. 能够正确解析VBox输出的VBO格式文件
-3. 成功提取所有传感器数据，包括时间、位置、速度等
-4. 解析完成后输出成功导入的点数量
-5. 对于非法格式文件，给出清晰错误提示并返回非零退出码
-6. 输出数据结构符合统一内部格式规范",Business Story,Backlog
-US-003,"As a developer, I want a unified internal data format for all imported data, so that the subsequent analysis logic can be consistent.",High,定义统一的JSON内部数据结构，包含所有必要字段。<br>**如果不做：** 不同数据源导入的数据格式不一致，后续分析模块需要处理多种格式，代码重复且难以维护，扩展性差，添加新数据格式支持成本极高,"1. 定义统一的TypeScript类型定义文件
-2. 所有导入模块都输出相同格式的LapData对象
-3. LapData包含以下必填字段：
-   - 元信息（来源文件、格式、导入时间）
-   - 数据点数组（每个点包含时间、经纬度、速度）
-   - 分割后的圈数组
-4. 新增数据格式只需实现解析层，无需修改后续分析模块接口
-5. 所有模块能够通过类型检查",Technical Task,Backlog
-US-004,"As a CLI user, I want to batch import multiple data files in one command, so that I can quickly get lap information for all files.",High,支持多个文件作为输入参数，一次性处理完成,"1. 命令支持传入多个文件路径：import [nmea|vbo] file1 file2 ...
-2. 依次处理每个文件，逐个输出处理结果
-3. 一个文件处理失败不中断其他文件处理
-4. 处理完成后输出统计信息：成功X个，失败Y个
-5. 所有失败文件返回非零整体退出码",Business Story,Backlog
-US-005,"As a CLI user, I want the system to automatically detect and split laps based on start/finish line, so that I don't need to manually split laps.",High,根据GPS轨迹自动识别起点/终点线，切分出单个圈速,"1. 导入数据后，系统自动识别起点/终点线区域
-2. 根据起点/终点线的穿越自动分割圈速
-3. 每个圈包含完整的GPS点数组和时间信息
-4. 分割结果中每个圈的起点和终点都在终点线区域内
-5. 能够处理单圈和多圈数据
-6. 分割失败时给出清晰提示",Business Story,Backlog
-US-006,"As a CLI user, I want to see a list of all detected laps with lap time information, so that I can quickly understand the file content.",High,输出每个文件的圈数列表，显示每圈的圈时,"1. import完成后自动输出圈速列表
-2. 列表显示每圈编号和圈速（时间格式 mm:ss.sss）
-3. 输出格式易读，适合在终端查看
-4. 支持 --json 参数输出JSON格式",Business Story,Backlog
-US-007,"As a CLI user, I want to compare two arbitrary laps from same or different files, so that I can analyze the differences between my two laps.",High,支持跨文件对比任意两圈，输出对比结果,"1. 提供 compare lap <file1>:<lap1> <file2>:<lap2> 命令
-2. 支持同一文件不同圈对比，也支持不同文件之间圈对比
-3. 能够正确加载指定圈的数据
-4. 输出对比结果到标准输出
-5. 参数格式错误时给出帮助提示",Business Story,Backlog
-US-008,"As a CLI user, I want to see the total lap time difference between the two compared laps, so that I can know which lap is faster.",High,计算并显示总圈时差,"1. 对比结果中显示两圈的总时间
-2. 自动计算并显示总时间差
-3. 清楚标识哪一圈更快
-4. 时间差精度保留到毫秒",Business Story,Backlog
-US-009,"As a CLI user, I want to see time difference by sector (track segment), so that I can know where I gained or lost time.",High,基于赛道分段计算并显示分段时间差,"1. 当指定了赛道信息后，对比结果自动按赛道分段计算
-2. 显示每个分段的时间和时间差
-3. 每个分段标识哪一圈更快
-4. 时间精度保留到毫秒",Business Story,Backlog
-US-010,"As a CLI user, I want all commands to support single execution and exit mode, so that I can easily script and automate workflows.",High,无交互式REPL，每个命令完成单个任务后退出，符合CLI工具设计哲学,"1. 所有CLI命令执行完成后自动退出，不进入交互模式
-2. 每个命令只完成一个单一任务
-3. 支持Shell脚本组合多个命令完成复杂工作流
-4. 退出码正确表示成功（0）或失败（非0）",Business Story,Backlog
-US-011,"As a CLI user, I want default human-readable text output to stdout, so that I can quickly understand results in terminal.",High,默认输出易读的文本格式,"1. 默认输出格式为易读的人类可读文本
-2. 文本排版适应终端宽度
-3. 关键信息清晰突出
-4. 无需任何参数即可获得可读输出",Business Story,Backlog
-US-012,"As an automation user, I want all commands to support JSON output format, so that I can parse results with other programs.",High,所有命令支持 `--json` 参数输出JSON，便于管道处理,"1. 所有命令支持 --json 参数
-2. 指定 --json 后输出结构化JSON数据到stdout
-3. JSON格式符合内部数据结构规范
-4. 其他程序能够解析JSON进行后续处理
-5. --json 模式不输出额外日志信息到stdout",Business Story,Backlog
-US-013,"As a user, I want to manage track metadata with dedicated CLI commands, so that I can configure my commonly used tracks.",High,提供 `track list/info/add` 一组命令管理赛道数据,"1. 提供 track 子命令组管理赛道数据
-2. 包含 list/info/add 基础命令
-3. 所有赛道数据持久化存储
-4. 添加后能够被后续分析功能使用",Business Story,Backlog
-US-014,"As a user, I want to list all configured tracks with basic information, so that I can see what tracks are available.",High,`late-brake track list` 命令，列出所有内置和自定义赛道,"1. late-brake track list 输出所有已配置赛道列表
-2. 列表显示赛道ID、名称、长度信息
-3. 默认文本输出易读，支持 --json 输出JSON",Business Story,Backlog
-US-015,"As a user, I want to see detailed information for a specific track, so that I can verify the track configuration.",High,`late-brake track info <track-id>` 命令，显示完整赛道信息,"1. late-brake track info <track-id> 显示指定赛道详情
-2. 显示赛道名称、ID、长度、分段数量、位置信息
-3. 默认文本输出易读，支持 --json 输出JSON
-4. 对于不存在的赛道ID给出清晰错误提示",Business Story,Backlog
-US-016,"As a user, I want to add or update a track from a JSON file, so that I can add my own custom tracks.",High,`late-brake track add <file.json>` 命令，导入赛道JSON文件,"1. late-brake track add <file.json> 从JSON文件导入赛道
-2. JSON格式符合文档定义
-3. 导入成功后提示成功，显示赛道ID和名称
-4. JSON格式错误时给出清晰错误提示
-5. 相同ID自动覆盖更新",Business Story,Backlog
-US-017,"As a user, I want the system to automatically match track based on GPS trace, so that I don't need to manually specify the track every time.",High,自动将导入的GPS轨迹与已配置赛道进行匹配,"1. 数据导入完成后，自动用GPS轨迹匹配已配置赛道
-2. 匹配成功自动使用赛道信息进行分段分析
-3. 匹配度显示置信度
-4. 匹配失败提示无法自动匹配，建议手动指定",Business Story,Backlog
-US-018,"As a user, I want to manually specify the track ID with `--track` parameter when automatic matching fails, so that I can still process the data.",High,支持 `--track <track-id>` 参数手动指定赛道,"1. 所有import命令支持 --track <track-id> 参数
-2. 指定后强制使用该赛道进行分析，忽略自动匹配结果
-3. 自动匹配失败时提示用户可以使用 --track 手动指定
-4. 对于不存在的track-id给出错误提示",Business Story,Backlog
-US-019,"As a user, I want built-in track metadata for common circuits, so that I can use the tool immediately without adding tracks myself.",Middle,内置上海国际赛车场、珠海国际赛车场等常见赛道数据,,Business Story,Backlog
-US-020,"As a user, I want speed difference comparison between two laps, so that I can analyze where I was faster or slower.",Middle,按分段/弯道显示速度差异,,Business Story,Backlog
-US-021,"As a developer, I need to define the track JSON format specification, so that users can correctly write custom track files.",High,编写赛道数据格式文档，定义完整JSON结构。<br>**如果不做：** 用户无法正确理解格式要求，无法创建自定义赛道文件，自定义赛道功能不可用,"1. 编写完整的Markdown格式文档
-2. 清晰定义赛道JSON的所有字段
-3. 提供完整的JSON示例
-4. 说明每个字段的含义、数据类型、是否必填
-5. 用户可以根据文档编写正确的自定义赛道JSON文件",Technical Task,Backlog
-US-022,"As a developer, I need to define the internal data format specification, so that all modules use consistent data structures.",High,编写内部数据格式文档。<br>**如果不做：** 不同模块开发时可能出现数据格式不兼容，导致模块间集成失败，增加调试难度,"1. 编写完整的Markdown格式文档
-2. 定义内部数据结构的TypeScript接口
-3. 说明每个字段的用途和数据格式
-4. 所有导入模块和分析模块都遵循该格式
-5. 文档包含示例数据",Technical Task,Backlog
-US-023,"As a user, I want to manually adjust lap split points, so that I can correct automatic splitting errors.",Low,v1不实现，后续迭代,,Business Story,Backlog
-US-024,"As a user, I want to generate speed-distance curve data for visualization, so that I can draw charts in Excel or Python.",Low,v1不实现，后续迭代,,Business Story,Backlog
-US-025,"As a user, I want GPS trace visualization output, so that I can see the difference of racing lines on map.",Low,v1不实现，后续迭代,,Business Story,Backlog
-US-026,"As a user, I want the system to automatically identify the fastest lap in a file, so that I can quickly find my best performance.",Low,v1不实现，后续迭代,,Business Story,Backlog
-US-027,"As a racing driver, I want specialized braking point analysis between two laps, so that I can find the optimal braking point.",Low,这是产品核心诉求，但v1先做基础对比功能，后续迭代专门的刹车点分析,,Business Story,Backlog
-US-028,"As a user, I want support for CSV format import, so that I can import data from other recorders.",Low,v1只支持NMEA和VBO，后续迭代,,Business Story,Backlog
-US-029,"As a user, I want support for AiM format import, so that I can import data from AiM devices.",Low,v1只支持NMEA和VBO，后续迭代,,Business Story,Backlog
-US-030,"As a user, I want GPS data smoothing and filtering, so that analysis results are more accurate.",Low,对原始GPS数据进行平滑处理，减少噪声干扰。<br>**如果不做：** GPS原始数据噪声较大，导致计算得到的速度和位置偏差较大，影响分析结果的准确性，可能误导驾驶改进方向,,Technical Task,Backlog
+﻿ID,User Story,Priority,Remark,Type,Status
+US-001,"As a CLI user, I want to import NMEA format GPS data files, so that I can process my NMEA recorded lap data.",High,支持标准NMEA 0183格式GPS数据解析，提取时间、坐标、速度信息,Business Story,Backlog
+US-002,"As a CLI user, I want to import VBO (VBox) format data files, so that I can process my VBox recorded lap data.",High,支持VBox输出的VBO格式解析，提取完整传感器数据,Business Story,Backlog
+US-003,"As a developer, I want a unified internal data format for all imported data, so that the subsequent analysis logic can be consistent.",High,定义统一的JSON内部数据结构，包含所有必要字段。<br>**如果不做：** 不同数据源导入的数据格式不一致，后续分析模块需要处理多种格式，代码重复且难以维护，扩展性差，添加新数据格式支持成本极高,Technical Task,Backlog
+US-004,"As a CLI user, I want to batch import multiple data files in one command, so that I can quickly get lap information for all files.",High,支持多个文件作为输入参数，一次性处理完成,Business Story,Backlog
+US-005,"As a CLI user, I want the system to automatically detect and split laps based on start/finish line, so that I don't need to manually split laps.",High,根据GPS轨迹自动识别起点/终点线，切分出单个圈速,Business Story,Backlog
+US-006,"As a CLI user, I want to see a list of all detected laps with lap time information, so that I can quickly understand the file content.",High,输出每个文件的圈数列表，显示每圈的圈时,Business Story,Backlog
+US-007,"As a CLI user, I want to compare two arbitrary laps from same or different files, so that I can analyze the differences between my two laps.",High,支持跨文件对比任意两圈，输出对比结果,Business Story,Backlog
+US-008,"As a CLI user, I want to see the total lap time difference between the two compared laps, so that I can know which lap is faster.",High,计算并显示总圈时差,Business Story,Backlog
+US-009,"As a CLI user, I want to see time difference by sector (track segment), so that I can know where I gained or lost time.",High,基于赛道分段计算并显示分段时间差,Business Story,Backlog
+US-010,"As a CLI user, I want all commands to support single execution and exit mode, so that I can easily script and automate workflows.",High,无交互式REPL，每个命令完成单个任务后退出，符合CLI工具设计哲学,Business Story,Backlog
+US-011,"As a CLI user, I want default human-readable text output to stdout, so that I can quickly understand results in terminal.",High,默认输出易读的文本格式,Business Story,Backlog
+US-012,"As an automation user, I want all commands to support JSON output format, so that I can parse results with other programs.",High,所有命令支持 `--json` 参数输出JSON，便于管道处理,Business Story,Backlog
+US-013,"As a user, I want to manage track metadata with dedicated CLI commands, so that I can configure my commonly used tracks.",High,提供 `track list/info/add` 一组命令管理赛道数据,Business Story,Backlog
+US-014,"As a user, I want to list all configured tracks with basic information, so that I can see what tracks are available.",High,`late-brake track list` 命令，列出所有内置和自定义赛道,Business Story,Backlog
+US-015,"As a user, I want to see detailed information for a specific track, so that I can verify the track configuration.",High,`late-brake track info <track-id>` 命令，显示完整赛道信息,Business Story,Backlog
+US-016,"As a user, I want to add or update a track from a JSON file, so that I can add my own custom tracks.",High,`late-brake track add <file.json>` 命令，导入赛道JSON文件,Business Story,Backlog
+US-017,"As a user, I want the system to automatically match track based on GPS trace, so that I don't need to manually specify the track every time.",High,自动将导入的GPS轨迹与已配置赛道进行匹配,Business Story,Backlog
+US-018,"As a user, I want to manually specify the track ID with `--track` parameter when automatic matching fails, so that I can still process the data.",High,支持 `--track <track-id>` 参数手动指定赛道,Business Story,Backlog
+US-019,"As a user, I want built-in track metadata for common circuits, so that I can use the tool immediately without adding tracks myself.",Middle,内置上海国际赛车场、珠海国际赛车场等常见赛道数据,Business Story,Backlog
+US-020,"As a user, I want speed difference comparison between two laps, so that I can analyze where I was faster or slower.",Middle,按分段/弯道显示速度差异,Business Story,Backlog
+US-021,"As a developer, I need to define the track JSON format specification, so that users can correctly write custom track files.",High,编写赛道数据格式文档，定义完整JSON结构。<br>**如果不做：** 用户无法正确理解格式要求，无法创建自定义赛道文件，自定义赛道功能不可用,Technical Task,Backlog
+US-022,"As a developer, I need to define the internal data format specification, so that all modules use consistent data structures.",High,编写内部数据格式文档。<br>**如果不做：** 不同模块开发时可能出现数据格式不兼容，导致模块间集成失败，增加调试难度,Technical Task,Backlog
+US-023,"As a user, I want to manually adjust lap split points, so that I can correct automatic splitting errors.",Low,v1不实现，后续迭代,Business Story,Backlog
+US-024,"As a user, I want to generate speed-distance curve data for visualization, so that I can draw charts in Excel or Python.",Low,v1不实现，后续迭代,Business Story,Backlog
+US-025,"As a user, I want GPS trace visualization output, so that I can see the difference of racing lines on map.",Low,v1不实现，后续迭代,Business Story,Backlog
+US-026,"As a user, I want the system to automatically identify the fastest lap in a file, so that I can quickly find my best performance.",Low,v1不实现，后续迭代,Business Story,Backlog
+US-027,"As a racing driver, I want specialized braking point analysis between two laps, so that I can find the optimal braking point.",Low,这是产品核心诉求，但v1先做基础对比功能，后续迭代专门的刹车点分析,Business Story,Backlog
+US-028,"As a user, I want support for CSV format import, so that I can import data from other recorders.",Low,v1只支持NMEA和VBO，后续迭代,Business Story,Backlog
+US-029,"As a user, I want support for AiM format import, so that I can import data from AiM devices.",Low,v1只支持NMEA和VBO，后续迭代,Business Story,Backlog
+US-030,"As a user, I want GPS data smoothing and filtering, so that analysis results are more accurate.",Low,对原始GPS数据进行平滑处理，减少噪声干扰。<br>**如果不做：** GPS原始数据噪声较大，导致计算得到的速度和位置偏差较大，影响分析结果的准确性，可能误导驾驶改进方向,Technical Task,Backlog
