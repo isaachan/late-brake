@@ -68,23 +68,21 @@
 
   "turns": [
     {
-      "id": 1,
-      "number": 1,
       "name": "T1",
       "type": "left-right",
       "start_distance_m": 120,
       "apex_distance_m": 280,
+      "apex_coordinates": [31.3389, 121.2218],
       "end_distance_m": 350,
       "radius_m": 85,
       "peak_speed_kph_expected": 165
     },
     {
-      "id": 2,
-      "number": 2,
       "name": "T2",
       "type": "right",
       "start_distance_m": 350,
       "apex_distance_m": 410,
+      "apex_coordinates": [31.3395, 121.2205],
       "end_distance_m": 460,
       "radius_m": 35,
       "peak_speed_kph_expected": 110
@@ -123,12 +121,11 @@
 - `turns`: 该分段包含的弯道编号列表
 
 ### 弯道信息（turns）
-- `id`: 弯道ID
-- `number`: 弯道编号
 - `name`: 弯道名称（通常为 T{编号}）
 - `type`: 弯道类型：`left`/`right`/`left-right`/`right-left` 等
 - `start_distance_m`: 弯道起点距离（从赛道起点开始计算，米）
-- `apex_distance_m`: 弯心距离
+- `apex_distance_m`: 弯心距离（从赛道起点到弯心的距离，米）
+- `apex_coordinates`: 弯心顶点GPS坐标，`[纬度, 经度]`
 - `end_distance_m`: 弯道终点距离
 - `radius_m`: 弯道半径（米），复合弯道可留空
 - `peak_speed_kph_expected`: 该弯道理论最佳车速（公里/小时）
