@@ -181,7 +181,11 @@ def validate_track_file(path: str) -> Tuple[bool, Optional[str], Optional[Track]
     except json.JSONDecodeError as e:
         return False, f"JSON 格式错误: {str(e)}", None
     except ValidationError as e:
-        return False, f"格式验证失败: {str(e)}", None
+        # 只输出错误路径和信息，不打印完整JSON实例（US-036）
+        # jsonschema validate() 只抛出第一个错误，无需遍历多个
+        path = "/".join(str(p) for p in e.path) if e.path else "(root)"
+        msg = f"字段 '{path}': {e.message}"
+        return False, f"格式验证失败: {msg}", None
     except Exception as e:
         return False, f"加载失败: {str(e)}", None
 

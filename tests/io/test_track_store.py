@@ -23,7 +23,7 @@ def test_get_track_by_id_exists():
     assert track.id == "tianma"
     assert track.full_name == "上海天马赛车场"
     assert track.length_m == 2063.0
-    assert track.turn_count == 8
+    assert track.turn_count == 14
 
 
 def test_get_track_by_id_not_exists():
