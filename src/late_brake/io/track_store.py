@@ -50,6 +50,7 @@ TRACK_JSON_SCHEMA = {
         },
         "centerline": {
             "type": "array",
+            "minItems": 1,
             "items": {
                 "type": "array",
                 "minItems": 2,
@@ -58,7 +59,7 @@ TRACK_JSON_SCHEMA = {
             }
         },
         "geofence": {
-            "type": "array",
+            "type": ["array", "null"],
             "items": {
                 "type": "array",
                 "minItems": 2,
@@ -67,7 +68,7 @@ TRACK_JSON_SCHEMA = {
             }
         },
         "sectors": {
-            "type": "array",
+            "type": ["array", "null"],
             "items": {
                 "type": "object",
                 "required": ["id", "name", "start_distance_m", "end_distance_m"],
@@ -81,7 +82,7 @@ TRACK_JSON_SCHEMA = {
             }
         },
         "turns": {
-            "type": "array",
+            "type": ["array", "null"],
             "items": {
                 "type": "object",
                 "required": ["id", "number", "name", "type", "start_distance_m", "apex_distance_m", "end_distance_m"],
@@ -117,7 +118,10 @@ def get_builtin_track_dir() -> str:
 
 
 def list_all_tracks() -> List[Track]:
-    """列出所有已配置赛道（内置 + 用户自定义）"""
+    """列出所有已配置赛道（内置 + 用户自定义）
+
+    任意赛道校验失败则立即抛出异常，不静默跳过（US-034）
+    """
     tracks: List[Track] = []
 
     # 先读内置赛道
@@ -126,9 +130,10 @@ def list_all_tracks() -> List[Track]:
         for filename in os.listdir(builtin_dir):
             if filename.endswith(".json"):
                 path = os.path.join(builtin_dir, filename)
-                track = load_track_from_file(path)
-                if track is not None:
-                    tracks.append(track)
+                valid, err_msg, track = validate_track_file(path)
+                if not valid or track is None:
+                    raise ValueError(f"赛道文件 '{path}' 校验失败: {err_msg}")
+                tracks.append(track)
 
     # 再读用户自定义赛道，覆盖同名ID
     user_dir = get_user_track_dir()
@@ -136,11 +141,12 @@ def list_all_tracks() -> List[Track]:
         for filename in os.listdir(user_dir):
             if filename.endswith(".json"):
                 path = os.path.join(user_dir, filename)
-                track = load_track_from_file(path)
-                if track is not None:
-                    # 移除同名内置赛道，用户覆盖内置
-                    tracks = [t for t in tracks if t.id != track.id]
-                    tracks.append(track)
+                valid, err_msg, track = validate_track_file(path)
+                if not valid or track is None:
+                    raise ValueError(f"赛道文件 '{path}' 校验失败: {err_msg}")
+                # 移除同名内置赛道，用户覆盖内置
+                tracks = [t for t in tracks if t.id != track.id]
+                tracks.append(track)
 
     return tracks
 
@@ -201,7 +207,10 @@ def add_track_from_file(source_path: str) -> Tuple[bool, str, Track]:
 
 
 def get_track_by_id(track_id: str) -> Optional[Track]:
-    """根据ID获取赛道"""
+    """根据ID获取赛道
+
+    加载过程中任意赛道校验失败则抛出异常（US-034）
+    """
     all_tracks = list_all_tracks()
     for track in all_tracks:
         if track.id == track_id:

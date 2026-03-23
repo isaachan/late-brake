@@ -98,7 +98,15 @@ def track_group():
 @click.option("--json", "output_json", is_flag=True, default=False, help="输出JSON格式")
 def track_list(output_json: bool):
     """列出所有已配置赛道"""
-    tracks = list_all_tracks()
+    try:
+        tracks = list_all_tracks()
+    except ValueError as e:
+        if output_json:
+            click.echo(json.dumps({"error": str(e)}, ensure_ascii=False))
+        else:
+            click.echo(f"错误: {e}")
+        raise SystemExit(1)
+
     if output_json:
         print_track_list_json(tracks)
     else:
@@ -110,7 +118,15 @@ def track_list(output_json: bool):
 @click.option("--json", "output_json", is_flag=True, default=False, help="输出JSON格式")
 def track_info(track_id: str, output_json: bool):
     """显示指定赛道详细信息"""
-    track = get_track_by_id(track_id)
+    try:
+        track = get_track_by_id(track_id)
+    except ValueError as e:
+        if output_json:
+            click.echo(json.dumps({"error": str(e)}, ensure_ascii=False))
+        else:
+            click.echo(f"错误: {e}")
+        raise SystemExit(1)
+
     if track is None:
         click.echo(f"错误: 赛道ID '{track_id}' 不存在")
         raise SystemExit(1)
@@ -207,7 +223,13 @@ def load_command(data_files, track_id, output_json, force_reload):
 
         # 获取赛道
         if track_id is not None:
-            track = get_track_by_id(track_id)
+            try:
+                track = get_track_by_id(track_id)
+            except ValueError as e:
+                result["error"] = str(e)
+                results.append(result)
+                any_failed = True
+                continue
             if track is None:
                 result["error"] = f"指定的赛道ID '{track_id}' 不存在"
                 results.append(result)
@@ -216,7 +238,13 @@ def load_command(data_files, track_id, output_json, force_reload):
             match_msg = f"手动指定赛道: {track.id}"
         else:
             # 自动匹配
-            track, match_msg = match_track(points)
+            try:
+                track, match_msg = match_track(points)
+            except ValueError as e:
+                result["error"] = str(e)
+                results.append(result)
+                any_failed = True
+                continue
             if track is None:
                 result["error"] = match_msg
                 results.append(result)
@@ -316,7 +344,14 @@ def compare_command(file1_path, lap1, file2_path, lap2, track_id, output_json):
     # 如果没指定，尝试从第一个文件缓存获取，或自动匹配
     track = None
     if track_id is not None:
-        track = get_track_by_id(track_id)
+        try:
+            track = get_track_by_id(track_id)
+        except ValueError as e:
+            if output_json:
+                click.echo(json.dumps({"error": str(e)}, ensure_ascii=False))
+            else:
+                click.echo(f"错误: {e}")
+            raise SystemExit(1)
         if track is None:
             click.echo(f"错误: 指定的赛道ID '{track_id}' 不存在")
             raise SystemExit(1)
@@ -324,7 +359,14 @@ def compare_command(file1_path, lap1, file2_path, lap2, track_id, output_json):
         # 尝试从第一个文件缓存读取
         cached1 = load_cached_laps(file1_path)
         if cached1 is not None and cached1.get("track_id"):
-            track = get_track_by_id(cached1["track_id"])
+            try:
+                track = get_track_by_id(cached1["track_id"])
+            except ValueError as e:
+                if output_json:
+                    click.echo(json.dumps({"error": str(e)}, ensure_ascii=False))
+                else:
+                    click.echo(f"错误: {e}")
+                raise SystemExit(1)
 
         if track is None:
             # 缓存没有或匹配失败，自动匹配
@@ -332,7 +374,14 @@ def compare_command(file1_path, lap1, file2_path, lap2, track_id, output_json):
             if points1 is None or len(points1) == 0:
                 click.echo(f"错误: 无法解析 {file1_path} 进行赛道匹配")
                 raise SystemExit(1)
-            track, msg = match_track(points1)
+            try:
+                track, msg = match_track(points1)
+            except ValueError as e:
+                if output_json:
+                    click.echo(json.dumps({"error": str(e)}, ensure_ascii=False))
+                else:
+                    click.echo(f"错误: {e}")
+                raise SystemExit(1)
             if track is None:
                 click.echo(f"错误: {msg}")
                 raise SystemExit(1)
@@ -358,6 +407,20 @@ def compare_command(file1_path, lap1, file2_path, lap2, track_id, output_json):
         click.echo(f"错误: {file2_path} 中只有 {len(laps2)} 圈，不存在第 {lap2} 圈")
         raise SystemExit(1)
     lap_obj2 = laps2[lap2 - 1]
+
+    # US-032: 检查两个 lap 是否都是完整圈
+    incomplete = []
+    if not lap_obj1.is_complete:
+        incomplete.append(f"圈 {lap1} (来自 {file1_path})")
+    if not lap_obj2.is_complete:
+        incomplete.append(f"圈 {lap2} (来自 {file2_path})")
+    if incomplete:
+        msg = "无法对比不完整圈: " + "、".join(incomplete) + "\n只能对比两个完整圈，请选择其他圈重试"
+        if output_json:
+            click.echo(json.dumps({"error": msg}, ensure_ascii=False))
+        else:
+            click.echo(f"错误: {msg}")
+        raise SystemExit(1)
 
     # 对比
     result = compare_laps(lap_obj1, lap_obj2, track)
