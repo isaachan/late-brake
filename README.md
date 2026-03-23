@@ -7,8 +7,9 @@ Late Brake 是一个纯命令行（CLI）的赛车圈速数据分析工具，用
 - [产品需求文档 (PRD)](docs/PRD-v1.md) - 产品概述、目标用户和核心功能
 - [内部数据格式规范](docs/data-format.md) - 统一数据结构定义
 - [赛道数据格式规范](docs/track-format.md) - 自定义赛道 JSON 格式定义
+- [赛道数据比较细则](docs/compare-data-requirements.md) - 执行赛道数据对比时，需要的输入数据需求与产生输出对比结果之间的关系
 - [用户故事待办列表](https://nio.feishu.cn/base/LjNWbfiAaa76mNsrdAqce05NnRf?table=tblSoyAKo8EInOAz&view=vewD5D6mGG)
-- [User Story 依赖关系](docs/user-story-deps.png) - 开发顺序依赖图（实线=强依赖，虚线=弱依赖）
+- [OBSOLETE - 图中Story基本完成开发] [User Story 依赖关系](docs/user-story-deps.png) - 开发顺序依赖图（实线=强依赖，虚线=弱依赖）
 
 ## 赛道数据
 [赛道数据](tracks)包含了三个赛道的数据，分别是“上海国际赛车场”、“上海天马赛车场”和一个我自己定义的“私有赛车场”。这些赛道的数据来自其他项目，不一定满足late brake项目的需要，请**谨慎使用**。
