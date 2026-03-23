@@ -134,3 +134,115 @@ def test_validate_valid_track():
         assert track.name == "Test Valid"
     finally:
         os.unlink(tmp_path)
+
+
+def test_validate_turn_with_apex_coordinates():
+    """测试校验：带弯道信息，包含新字段 apex_coordinates，没有 id/number"""
+    valid_track = {
+        "id": "test_turns",
+        "name": "Test Track with Turns",
+        "length_m": 1000.0,
+        "turn_count": 1,
+        "anchor": {"lat": 31.0, "lon": 121.0, "radius_m": 1000.0},
+        "gate": [[31.0, 121.0], [31.1, 121.1]],
+        "centerline": [[31.0, 121.0], [31.1, 121.1], [31.2, 121.2]],
+        "turns": [
+            {
+                "name": "T1",
+                "type": "left",
+                "start_distance_m": 100.0,
+                "apex_distance_m": 150.0,
+                "apex_coordinates": [31.05, 121.05],
+                "end_distance_m": 200.0
+            }
+        ]
+    }
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(valid_track, f)
+        tmp_path = f.name
+
+    try:
+        valid, err, track = validate_track_file(tmp_path)
+        assert valid
+        assert err is None
+        assert track is not None
+        assert track.turns is not None
+        assert len(track.turns) == 1
+        turn = track.turns[0]
+        assert turn.name == "T1"
+        assert turn.type == "left"
+        assert turn.apex_coordinates == [31.05, 121.05]
+        assert not hasattr(turn, 'id')
+        assert not hasattr(turn, 'number')
+    finally:
+        os.unlink(tmp_path)
+
+
+def test_validate_turn_missing_apex_coordinates():
+    """测试校验：弯道缺少 apex_coordinates 应该失败"""
+    invalid_track = {
+        "id": "test_turns",
+        "name": "Test Track with Turns",
+        "length_m": 1000.0,
+        "turn_count": 1,
+        "anchor": {"lat": 31.0, "lon": 121.0, "radius_m": 1000.0},
+        "gate": [[31.0, 121.0], [31.1, 121.1]],
+        "centerline": [[31.0, 121.0], [31.1, 121.1], [31.2, 121.2]],
+        "turns": [
+            {
+                "name": "T1",
+                "type": "left",
+                "start_distance_m": 100.0,
+                "apex_distance_m": 150.0,
+                "end_distance_m": 200.0
+                # missing apex_coordinates
+            }
+        ]
+    }
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(invalid_track, f)
+        tmp_path = f.name
+
+    try:
+        valid, err, track = validate_track_file(tmp_path)
+        assert not valid
+        assert err is not None
+        assert "apex_coordinates" in err
+        assert track is None
+    finally:
+        os.unlink(tmp_path)
+
+
+def test_validate_turn_apex_coordinates_wrong_length():
+    """测试校验：apex_coordinates 不是两个数应该失败"""
+    invalid_track = {
+        "id": "test_turns",
+        "name": "Test Track with Turns",
+        "length_m": 1000.0,
+        "turn_count": 1,
+        "anchor": {"lat": 31.0, "lon": 121.0, "radius_m": 1000.0},
+        "gate": [[31.0, 121.0], [31.1, 121.1]],
+        "centerline": [[31.0, 121.0], [31.1, 121.1], [31.2, 121.2]],
+        "turns": [
+            {
+                "name": "T1",
+                "type": "left",
+                "start_distance_m": 100.0,
+                "apex_distance_m": 150.0,
+                "apex_coordinates": [31.05],  # only one coordinate
+                "end_distance_m": 200.0
+            }
+        ]
+    }
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(invalid_track, f)
+        tmp_path = f.name
+
+    try:
+        valid, err, track = validate_track_file(tmp_path)
+        assert not valid
+        assert err is not None
+        assert "apex_coordinates" in err
+        assert track is None
+    finally:
+        os.unlink(tmp_path)

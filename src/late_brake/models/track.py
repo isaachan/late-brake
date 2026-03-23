@@ -28,13 +28,12 @@ class TrackSector(BaseModel):
 
 class TrackTurn(BaseModel):
     """单个弯道信息"""
-    id: int = Field(..., description="弯道ID")
-    number: int = Field(..., description="弯道编号")
     name: str = Field(..., description="弯道名称（通常为 T{编号}）")
     type: str = Field(..., description="弯道类型：left/right/left-right/right-left 等")
     start_distance_m: float = Field(..., description="弯道起点距离（从赛道起点开始计算，米）")
-    apex_distance_m: float = Field(..., description="弯心距离")
-    end_distance_m: float = Field(..., description="弯道终点距离")
+    apex_distance_m: float = Field(..., description="弯心距离（从赛道起点开始计算，米）")
+    apex_coordinates: List[float] = Field(..., description="弯心GPS坐标 [纬度, 经度]")
+    end_distance_m: float = Field(..., description="弯道终点距离（从赛道起点开始计算，米）")
     radius_m: Optional[float] = Field(None, description="弯道半径（米），复合弯道可留空")
     peak_speed_kph_expected: Optional[float] = Field(None, description="该弯道理论最佳车速（公里/小时）")
 
