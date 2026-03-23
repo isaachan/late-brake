@@ -153,7 +153,8 @@ def test_validate_turn_with_apex_coordinates():
                 "start_distance_m": 100.0,
                 "apex_distance_m": 150.0,
                 "apex_coordinates": [31.05, 121.05],
-                "end_distance_m": 200.0
+                "end_distance_m": 200.0,
+                "min_speed_target": 60.0
             }
         ]
     }
@@ -172,6 +173,7 @@ def test_validate_turn_with_apex_coordinates():
         assert turn.name == "T1"
         assert turn.type == "left"
         assert turn.apex_coordinates == [31.05, 121.05]
+        assert turn.min_speed_target == 60.0
         assert not hasattr(turn, 'id')
         assert not hasattr(turn, 'number')
     finally:
@@ -194,7 +196,8 @@ def test_validate_turn_missing_apex_coordinates():
                 "type": "left",
                 "start_distance_m": 100.0,
                 "apex_distance_m": 150.0,
-                "end_distance_m": 200.0
+                "end_distance_m": 200.0,
+                "min_speed_target": 60.0
                 # missing apex_coordinates
             }
         ]
@@ -230,7 +233,8 @@ def test_validate_turn_apex_coordinates_wrong_length():
                 "start_distance_m": 100.0,
                 "apex_distance_m": 150.0,
                 "apex_coordinates": [31.05],  # only one coordinate
-                "end_distance_m": 200.0
+                "end_distance_m": 200.0,
+                "min_speed_target": 60.0
             }
         ]
     }
@@ -244,5 +248,96 @@ def test_validate_turn_apex_coordinates_wrong_length():
         assert err is not None
         assert "apex_coordinates" in err
         assert track is None
+    finally:
+        os.unlink(tmp_path)
+
+
+def test_validate_turn_missing_min_speed_target():
+    """测试校验：弯道缺少 min_speed_target 应该失败"""
+    invalid_track = {
+        "id": "test_turns",
+        "name": "Test Track with Turns",
+        "length_m": 1000.0,
+        "turn_count": 1,
+        "anchor": {"lat": 31.0, "lon": 121.0, "radius_m": 1000.0},
+        "gate": [[31.0, 121.0], [31.1, 121.1]],
+        "centerline": [[31.0, 121.0], [31.1, 121.1], [31.2, 121.2]],
+        "turns": [
+            {
+                "name": "T1",
+                "type": "left",
+                "start_distance_m": 100.0,
+                "apex_distance_m": 150.0,
+                "apex_coordinates": [31.05, 121.05],
+                "end_distance_m": 200.0
+                # missing min_speed_target
+            }
+        ]
+    }
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(invalid_track, f)
+        tmp_path = f.name
+
+    try:
+        valid, err, track = validate_track_file(tmp_path)
+        assert not valid
+        assert err is not None
+        assert "min_speed_target" in err
+        assert track is None
+    finally:
+        os.unlink(tmp_path)
+
+
+def test_validate_turn_with_all_new_fields():
+    """测试校验：包含 apex_coordinates 和 min_speed_target 应该通过"""
+    valid_track = {
+        "id": "test_turns_new",
+        "name": "Test Track with New Fields",
+        "length_m": 1000.0,
+        "turn_count": 2,
+        "anchor": {"lat": 31.0, "lon": 121.0, "radius_m": 1000.0},
+        "gate": [[31.0, 121.0], [31.1, 121.1]],
+        "centerline": [[31.0, 121.0], [31.1, 121.1], [31.2, 121.2]],
+        "turns": [
+            {
+                "name": "T1",
+                "type": "left",
+                "start_distance_m": 100.0,
+                "apex_distance_m": 150.0,
+                "apex_coordinates": [31.05, 121.05],
+                "end_distance_m": 200.0,
+                "min_speed_target": 60.0
+            },
+            {
+                "name": "T2",
+                "type": "right",
+                "start_distance_m": 250.0,
+                "apex_distance_m": 300.0,
+                "apex_coordinates": [31.10, 121.10],
+                "end_distance_m": 350.0,
+                "radius_m": 50.0,
+                "min_speed_target": 80.0
+            }
+        ]
+    }
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(valid_track, f)
+        tmp_path = f.name
+
+    try:
+        valid, err, track = validate_track_file(tmp_path)
+        assert valid
+        assert err is None
+        assert track is not None
+        assert track.turns is not None
+        assert len(track.turns) == 2
+        turn1 = track.turns[0]
+        assert turn1.name == "T1"
+        assert turn1.apex_coordinates == [31.05, 121.05]
+        assert turn1.min_speed_target == 60.0
+        assert not hasattr(turn1, 'peak_speed_kph_expected')
+        turn2 = track.turns[1]
+        assert turn2.radius_m == 50.0
+        assert turn2.min_speed_target == 80.0
     finally:
         os.unlink(tmp_path)

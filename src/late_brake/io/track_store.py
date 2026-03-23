@@ -85,7 +85,7 @@ TRACK_JSON_SCHEMA = {
             "type": ["array", "null"],
             "items": {
                 "type": "object",
-                "required": ["name", "type", "start_distance_m", "apex_distance_m", "apex_coordinates", "end_distance_m"],
+                "required": ["name", "type", "start_distance_m", "apex_distance_m", "apex_coordinates", "end_distance_m", "min_speed_target"],
                 "properties": {
                     "name": {"type": "string"},
                     "type": {"type": "string"},
@@ -99,7 +99,7 @@ TRACK_JSON_SCHEMA = {
                     },
                     "end_distance_m": {"type": "number"},
                     "radius_m": {"type": ["number", "null"]},
-                    "peak_speed_kph_expected": {"type": ["number", "null"]}
+                    "min_speed_target": {"type": "number"}
                 }
             }
         }

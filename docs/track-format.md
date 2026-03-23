@@ -75,7 +75,7 @@
       "apex_coordinates": [31.3389, 121.2218],
       "end_distance_m": 350,
       "radius_m": 85,
-      "peak_speed_kph_expected": 165
+      "min_speed_target": 165
     },
     {
       "name": "T2",
@@ -85,7 +85,7 @@
       "apex_coordinates": [31.3395, 121.2205],
       "end_distance_m": 460,
       "radius_m": 35,
-      "peak_speed_kph_expected": 110
+      "min_speed_target": 110
     }
   ]
 }
@@ -128,4 +128,4 @@
 - `apex_coordinates`: 弯心顶点GPS坐标，`[纬度, 经度]`
 - `end_distance_m`: 弯道终点距离
 - `radius_m`: 弯道半径（米），复合弯道可留空
-- `peak_speed_kph_expected`: 该弯道理论最佳车速（公里/小时）
+- `min_speed_target`: 弯心最低目标时速（公里/小时，V-min），弯心最低速度比最高速度更具驾驶参考意义
