@@ -1,13 +1,11 @@
 {
   "id": "saic",
   "name": "Shanghai International Circuit",
-  
   "anchor": {
     "lat": 31.3401765,
     "lon": 121.219292,
     "radius_m": 1062
   },
-
   "centerline": [
     [
       31.3376648,
@@ -2069,5 +2067,9 @@
       31.337814167712484,
       121.22228651905705
     ]
-  ]
+  ],
+  "full_name": "上海国际赛车场",
+  "location": "Shanghai, China",
+  "length_m": 5451,
+  "turn_count": 16
 }
