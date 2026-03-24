@@ -26,4 +26,5 @@ wheels/
 *~
 .DS_Store
 */*.lb.json
+*/.*.lb.json
 .coverage
