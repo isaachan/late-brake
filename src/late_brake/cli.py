@@ -472,14 +472,33 @@ def compare_command(file1_path, lap1, file2_path, lap2, track_id, output_json):
         if result["sector_diff"]:
             click.echo("分段对比:")
             click.echo()
-            click.echo(f"  {'分段':<15} {'圈1':>10} {'圈2':>10} {'差值':>10}")
-            click.echo("  " + "-" * 48)
+            click.echo(f"  {'分段':<15} {'时间(圈1)':>10} {'时间(圈2)':>10} {'时差':>8} {'速度(圈1)':>10} {'速度(圈2)':>10} {'速差':>8}")
+            click.echo("  " + "-" * 78)
             for sd in result["sector_diff"]:
                 t1 = sd["time1"]
                 t2 = sd["time2"]
-                d = sd["time_diff"]
+                td = sd["time_diff"]
+                av1 = sd["avg_speed1"]
+                av2 = sd["avg_speed2"]
+                svd = sd["avg_speed_diff"]
                 name = sd["sector_name"][:12] + ("..." if len(sd["sector_name"]) > 12 else "")
-                click.echo(f"  {name:<15} {t1:>10.3f} {t2:>10.3f} {d:>10.3f}")
+                click.echo(f"  {name:<15} {t1:>10.3f} {t2:>10.3f} {td:>8.3f} {av1:>10.2f} {av2:>10.2f} {svd:>8.2f}")
+            click.echo()
+
+        if result["turn_diff"]:
+            click.echo("弯道对比:")
+            click.echo()
+            click.echo(f"  {'弯道':<6} {'入速1':>8} {'入速2':>8} {'入差':>6} {'心速1':>8} {'心速2':>8} {'心差':>6} {'出速1':>8} {'出速2':>8} {'出差':>6} {'均速1':>8} {'均速2':>8} {'均差':>6} {'时差':>6}")
+            click.echo("  " + "-" * 108)
+            for td in result["turn_diff"]:
+                click.echo(
+                    f"  {td['turn_name']:<6} "
+                    f"{td['speed_entry1']:>8.2f} {td['speed_entry2']:>8.2f} {td['speed_entry_diff']:>6.2f} "
+                    f"{td['speed_apex1']:>8.2f} {td['speed_apex2']:>8.2f} {td['speed_apex_diff']:>6.2f} "
+                    f"{td['speed_exit1']:>8.2f} {td['speed_exit2']:>8.2f} {td['speed_exit_diff']:>6.2f} "
+                    f"{td['avg_speed1']:>8.2f} {td['avg_speed2']:>8.2f} {td['avg_speed_diff']:>6.2f} "
+                    f"{td['time_diff']:>6.3f}"
+                )
             click.echo()
 
     # 对比总是成功

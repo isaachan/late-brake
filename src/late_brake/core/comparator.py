@@ -34,6 +34,66 @@ def resample_lap(lap: Lap, step_m: float = 1.0) -> Tuple[np.ndarray, np.ndarray]
     return sample_distances, sample_speeds
 
 
+def get_speed_at_distance(lap: Lap, target_dist_abs: float) -> float:
+    """
+    在圈中找到给定绝对距离（相对于赛道起点）对应的速度
+    通过线性插值得到更准确的速度
+    """
+    # 转换为相对于单圈起点的距离
+    # target_dist_abs: 距离赛道起点的米数
+    # lap.start_distance: 单圈起点距离整个文件起点的米数
+    target_dist = target_dist_abs
+
+    # 目标距离已经是赛道起点为0，单圈起点距离赛道起点是 0，所以不需要再减 lap.start_distance
+    # lap.start_distance 是相对于整个文件起点，不是赛道起点
+
+    # 如果超出范围，返回边界速度
+    if target_dist <= 0:
+        return lap.points[0].speed if lap.points else 0.0
+    if target_dist >= lap.lap_distance:
+        return lap.points[-1].speed if lap.points else 0.0
+
+    # 找到包围目标距离的两个点
+    prev_point = None
+    next_point = None
+
+    for p in lap.points:
+        dist = p.distance - lap.start_distance
+        if dist <= target_dist:
+            prev_point = p
+        if dist >= target_dist and next_point is None:
+            next_point = p
+            break
+
+    if prev_point is None:
+        return next_point.speed if next_point else 0.0
+    if next_point is None:
+        return prev_point.speed
+
+    if prev_point is next_point:
+        return prev_point.speed
+
+    # 线性插值
+    prev_dist = prev_point.distance - lap.start_distance
+    next_dist = next_point.distance - lap.start_distance
+    factor = (target_dist - prev_dist) / (next_dist - prev_dist)
+    speed = prev_point.speed + factor * (next_point.speed - prev_point.speed)
+
+    return speed
+
+
+def sector_avg_speed(lap: Lap, start_dist: float, end_dist: float, distance: float) -> float:
+    """
+    计算分段平均速度 (km/h)
+    distance 是分段长度（米）
+    """
+    time = sector_time(lap, start_dist, end_dist)
+    if time <= 0:
+        return 0.0
+    # 距离米 / 时间秒 × 3.6 → km/h
+    return (distance / time) * 3.6
+
+
 def compare_laps(
     lap1: Lap,
     lap2: Lap,
@@ -42,7 +102,7 @@ def compare_laps(
 ) -> Dict:
     """
     对比两个圈，返回对比结果
-    包含：总时间差、分段时间差、速度差异
+    包含：总时间差、分段时间差、分段速度差、弯道时间/速度对比
     """
     result = {
         "lap1": {
@@ -57,23 +117,28 @@ def compare_laps(
         },
         "total_time_diff": lap2.total_time - lap1.total_time,
         "sector_diff": [],
+        "turn_diff": [],
     }
 
     # 重采样对齐
     dist1, speed1 = resample_lap(lap1, step_m)
     dist2, speed2 = resample_lap(lap2, step_m)
 
-    # 计算速度差异统计
+    # 计算整体平均速度差异统计
     min_len = min(len(dist1), len(dist2))
     speed_diff = speed2[:min_len] - speed1[:min_len]
     result["avg_speed_diff"] = float(np.mean(speed_diff))
 
-    # 如果有赛道分段，计算分段时间差
+    # 如果有赛道分段，计算分段时间差和平均速度差
     if track is not None and track.sectors is not None:
         for sector in track.sectors:
             # 在原始圈中计算分段时间
             t1 = sector_time(lap1, sector.start_distance_m, sector.end_distance_m)
             t2 = sector_time(lap2, sector.start_distance_m, sector.end_distance_m)
+            # 计算分段平均速度
+            sector_dist = sector.end_distance_m - sector.start_distance_m
+            av1 = sector_avg_speed(lap1, sector.start_distance_m, sector.end_distance_m, sector_dist)
+            av2 = sector_avg_speed(lap2, sector.start_distance_m, sector.end_distance_m, sector_dist)
             result["sector_diff"].append({
                 "sector_id": sector.id,
                 "sector_name": sector.name,
@@ -82,6 +147,50 @@ def compare_laps(
                 "time1": t1,
                 "time2": t2,
                 "time_diff": t2 - t1,
+                "avg_speed1": av1,
+                "avg_speed2": av2,
+                "avg_speed_diff": av2 - av1,
+            })
+
+    # 如果有赛道弯道信息，计算每个弯道的对比
+    if track is not None and track.turns is not None:
+        for turn in track.turns:
+            # 计算弯道时间
+            t1 = sector_time(lap1, turn.start_distance_m, turn.end_distance_m)
+            t2 = sector_time(lap2, turn.start_distance_m, turn.end_distance_m)
+            # 获取各特征点速度
+            se1 = get_speed_at_distance(lap1, turn.start_distance_m)
+            se2 = get_speed_at_distance(lap2, turn.start_distance_m)
+            ap1 = get_speed_at_distance(lap1, turn.apex_distance_m)
+            ap2 = get_speed_at_distance(lap2, turn.apex_distance_m)
+            ex1 = get_speed_at_distance(lap1, turn.end_distance_m)
+            ex2 = get_speed_at_distance(lap2, turn.end_distance_m)
+            # 计算弯道平均速度
+            turn_dist = turn.end_distance_m - turn.start_distance_m
+            av1 = sector_avg_speed(lap1, turn.start_distance_m, turn.end_distance_m, turn_dist)
+            av2 = sector_avg_speed(lap2, turn.start_distance_m, turn.end_distance_m, turn_dist)
+            # 存入结果
+            result["turn_diff"].append({
+                "turn_name": turn.name,
+                "turn_type": turn.type,
+                "start_distance": turn.start_distance_m,
+                "apex_distance": turn.apex_distance_m,
+                "end_distance": turn.end_distance_m,
+                "time1": t1,
+                "time2": t2,
+                "time_diff": t2 - t1,
+                "speed_entry1": se1,
+                "speed_entry2": se2,
+                "speed_entry_diff": se2 - se1,
+                "speed_apex1": ap1,
+                "speed_apex2": ap2,
+                "speed_apex_diff": ap2 - ap1,
+                "speed_exit1": ex1,
+                "speed_exit2": ex2,
+                "speed_exit_diff": ex2 - ex1,
+                "avg_speed1": av1,
+                "avg_speed2": av2,
+                "avg_speed_diff": av2 - av1,
             })
 
     return result
