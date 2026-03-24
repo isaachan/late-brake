@@ -3,16 +3,15 @@ import folium
 from streamlit_folium import st_folium
 import io
 
-st.set_page_config(page_title="GPS 坐标转换绘图仪", layout="wide")
+st.set_page_config(page_title="GPS 坐标全量绘图仪", layout="wide")
 
-st.title("📍 特殊格式 GPS 轨迹绘制")
-st.write("上传原始文本文件（格式如：`+1864.59 -7266.88`），程序将自动除以 60 并绘制轨迹。")
+st.title("📍 GPS 轨迹全量可视化")
+st.write("已关闭采样优化，将渲染文件中的每一个坐标点。")
 
 # 1. 文件上传
 uploaded_file = st.file_uploader("上传坐标文本文件 (.txt, .log)", type=['txt', 'log'])
 
 if uploaded_file:
-    # 读取原始文本内容
     stringio = io.StringIO(uploaded_file.getvalue().decode("utf-8"))
     lines = stringio.readlines()
 
@@ -21,42 +20,55 @@ if uploaded_file:
     # 2. 解析逻辑
     for line in lines:
         parts = line.strip().split()
-        if len(parts) >= 2:
-            try:
-                # 转换逻辑：原始值 / 60
-                # 根据你的示例：-7266.88 转换后为正数 121.11，所以这里取了绝对值
-                # 如果你的数据中负号代表西经且地图需要保留，请去掉 abs()
-                lat = float(parts[0]) / 60.0
-                lon = abs(float(parts[1]) / 60.0) 
-                
+        lat, lon = None, None
+        
+        if len(parts) == 2:
+            lat = float(parts[0]) / 60.0
+            lon = abs(float(parts[1]) / 60.0) 
+        elif len(parts) >= 4:
+            lat = float(parts[2]) / 60.0
+            lon = abs(float(parts[3]) / 60.0) 
+
+        if lat is not None and lon is not None:
+            # 简单的去重逻辑：如果当前点与上一个点坐标完全相同，则跳过
+            if not locations or [lat, lon] != locations[-1]:
                 locations.append([lat, lon])
-            except ValueError:
-                continue # 跳过无法解析的行
 
     if locations:
-        st.info(f"成功解析 {len(locations)} 个坐标点")
+        st.info(f"正在渲染全部 {len(locations)} 个坐标点...")
         
-        # 显示转换后的数据预览
-        with st.expander("查看转换后的坐标数据"):
-            st.write(locations[:10], "... (仅显示前10条)")
-
         # 3. 创建地图
-        # 以第一个点为中心
         m = folium.Map(location=locations[0], zoom_start=13, control_scale=True)
 
-        # 4. 绘制线段 (PolyLine)
+        # 4. 绘制轨迹线
         folium.PolyLine(
             locations=locations,
-            color="#FF5733", # 使用醒目的橙红色
-            weight=4,
-            opacity=0.8
+            color="#FF5733",
+            weight=3,
+            opacity=0.7
         ).add_to(m)
+
+        # --- 全量添加悬停标记 ---
+        for i, loc in enumerate(locations):
+            folium.CircleMarker(
+                location=loc,
+                radius=2,                # 减小半径，避免点位过密重叠
+                color="#1E90FF",         # 使用道奇蓝，区分轨迹线
+                fill=True,
+                fill_color="#1E90FF",
+                fill_opacity=0.6,
+                stroke=False,
+                # 悬停显示经纬度及该点在序列中的索引
+                tooltip=folium.Tooltip(f"序号: {i}<br>纬度: {loc[0]:.6f}<br>经度: {loc[1]:.6f}")
+            ).add_to(m)
+        # ----------------------
 
         # 标记起点和终点
         folium.Marker(locations[0], popup="Start", icon=folium.Icon(color='green', icon='play')).add_to(m)
         folium.Marker(locations[-1], popup="End", icon=folium.Icon(color='red', icon='stop')).add_to(m)
 
         # 5. 渲染到网页
-        st_folium(m, width=1000, height=600)
+        # 注意：全量渲染时，st_folium 的响应速度取决于浏览器处理 DOM 的能力
+        st_folium(m, width=1200, height=700)
     else:
-        st.error("无法从文件中解析出有效的坐标，请检查文件格式。")
+        st.error("无法解析有效坐标。")

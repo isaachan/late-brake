@@ -1738,6 +1738,66 @@
       121.1150743
     ]
   ],
+  "turns": [
+    {
+      "name": "T1",
+      "type": "left",
+      "start_distance_m": 129,
+      "apex_distance_m": 175,
+      "apex_coordinates": [31.0791829, 121.1134193],
+      "end_distance_m": 196,
+      "radius_m": 20,
+      "min_speed_target": 165
+    },
+    {
+      "name": "T2",
+      "type": "right",
+      "start_distance_m": 210,
+      "apex_distance_m": 226,
+      "apex_coordinates": [31.0788491, 121.1136061],
+      "end_distance_m": 250,
+      "radius_m": 20,
+      "min_speed_target": 110
+    },
+    {
+      "name": "T3",
+      "type": "left",
+      "start_distance_m": 377,
+      "apex_distance_m": 395,
+      "apex_coordinates": [31.0775444, 121.1144361],
+      "end_distance_m": 417,
+      "radius_m": 20,
+      "min_speed_target": 110
+    },
+    {
+      "name": "T4",
+      "type": "left",
+      "start_distance_m": 585,
+      "apex_distance_m": 619,
+      "apex_coordinates": [31.0756833, 121.1151499],
+      "end_distance_m": 654,
+      "radius_m": 20,
+      "min_speed_target": 110
+    }
+  ],
+
+  "sectors": [
+    {
+      "id": 1,
+      "name": "Sector 1",
+      "start_distance_m": 0,
+      "end_distance_m": 270,
+      "turns": [1, 2]
+    },
+    {
+      "id": 2,
+      "name": "Sector 2",
+      "start_distance_m": 270,
+      "end_distance_m": 2063,
+      "turns": [3, 4]
+    }
+  ],
+
   "length_m": 2063,
   "turn_count": 14,
   "full_name": "上海天马赛车场",
