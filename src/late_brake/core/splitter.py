@@ -155,7 +155,38 @@ def split_laps(
     if not crossings:
         return []
 
+    # 先处理开头不完整圈（第一个穿越前）
+    if crossings:
+        first_cross_idx, first_cross_point = crossings[0]
+        # 特殊情况：只有一次穿越，且第一个穿越就在末尾 → 整个圈是完整的，起点在开头，不需要插入不完整圈
+        if len(crossings) == 1 and (len(points) - first_cross_idx) <= 10:
+            # 不插入开头不完整圈，留给后面特殊情况处理
+            pass
+        elif first_cross_idx > 0:
+            # 有数据在第一个穿越前，且这不是末尾穿越 → 这是不完整圈
+            points_before = points[:first_cross_idx]
+            if len(points_before) >= 10:  # 至少有10个点才算一个不完整圈
+                lap_number += 1
+                first_point = points_before[0]
+                last_point = points_before[-1]
+                lap = Lap(
+                    id=f"{source_file}.Lap{lap_number}",
+                    source_file=source_file,
+                    lap_number=lap_number,
+                    total_time=last_point.timestamp - first_point.timestamp,
+                    start_time=first_point.timestamp,
+                    end_time=last_point.timestamp,
+                    start_distance=first_point.distance,
+                    end_distance=last_point.distance,
+                    is_complete=False,
+                    lap_distance=last_point.distance - first_point.distance,
+                    points=points_before
+                )
+                # 插到最前面
+                laps.insert(0, lap)
+
     # 切分各圈
+    # 情况1：多个穿越点，正常切分完整圈
     for cross_idx in range(len(crossings) - 1):
         start_idx, start_point = crossings[cross_idx]
         end_idx, end_point = crossings[cross_idx + 1]
@@ -186,31 +217,30 @@ def split_laps(
         )
         laps.append(lap)
 
-    # 处理开头不完整圈（第一个穿越前）
-    if crossings:
-        first_cross_idx, first_cross_point = crossings[0]
-        if first_cross_idx > 0:
-            # 有数据在第一个穿越前，这是不完整圈
-            points_before = points[:first_cross_idx]
-            if len(points_before) >= 10:  # 至少有10个点才算一个不完整圈
-                lap_number += 1
-                first_point = points_before[0]
-                last_point = points_before[-1]
+    # 情况2：只有一次穿越，且穿越点在末尾附近 → 数据从起点开始，冲线后结束，是单圈飞行圈
+    if len(crossings) == 1:
+        cross_idx, cross_point = crossings[0]
+        # 如果第一个穿越点就是终点，说明起点在数据开头，冲线结束
+        if cross_idx > 10 and (len(points) - cross_idx) <= 10 and len(laps) == 0:
+            lap_number += 1
+            lap_points = points[0:cross_idx + 1]
+            total_time = cross_point.timestamp - lap_points[0].timestamp
+            if total_time >= min_lap_time_sec:
+                # 这就是完整单圈：从起跑线静止起步，冲线结束
                 lap = Lap(
                     id=f"{source_file}.Lap{lap_number}",
                     source_file=source_file,
                     lap_number=lap_number,
-                    total_time=last_point.timestamp - first_point.timestamp,
-                    start_time=first_point.timestamp,
-                    end_time=last_point.timestamp,
-                    start_distance=first_point.distance,
-                    end_distance=last_point.distance,
-                    is_complete=False,
-                    lap_distance=last_point.distance - first_point.distance,
-                    points=points_before
+                    total_time=total_time,
+                    start_time=lap_points[0].timestamp,
+                    end_time=cross_point.timestamp,
+                    start_distance=lap_points[0].distance,
+                    end_distance=cross_point.distance,
+                    is_complete=True,
+                    lap_distance=cross_point.distance - lap_points[0].distance,
+                    points=lap_points
                 )
-                # 插到最前面
-                laps.insert(0, lap)
+                laps.append(lap)
 
     # 处理结尾不完整圈（最后一个穿越后）
     if crossings:
