@@ -60,4 +60,17 @@
   4. 不同单圈之间的距离对比，帮助发现走线长度差异
 - `lap_distance`：新增计算字段，直接给出单圈行驶距离，方便使用
 
+## 3. 浮点精度约定
+
+JSON 输出中，浮点数按照以下规则保留小数位数，在不影响分析精度的前提下减小文件体积、提高可读性：
+
+| 字段类别                         | 保留小数 | 示例                 |
+|----------------------------------|----------|----------------------|
+| 时间相关 (`timestamp`, `total_time`, `start_time`, `end_time`) | 4        | `68.9500`           |
+| 距离相关 (`distance`, `lap_distance`, `start_distance`, `end_distance`) | 2 | `1985.60` |
+| 经纬度 (`latitude`, `longitude`) | 7        | `31.0794723`        |
+| 速度 (`speed`)                   | 2        | `68.90`             |
+| G值/控制量 (`g_force_x/y/z`, `steering_angle`, `throttle_position`, `brake_pressure`) | 3 | `0.123` |
+| 其他浮点字段                     | 3        | —                    |
+
 

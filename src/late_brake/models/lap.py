@@ -7,6 +7,7 @@ Late Brake - Lap Model
 """
 
 from pydantic import BaseModel, Field
+from pydantic import field_serializer
 from typing import List
 
 from .point import DataPoint
@@ -63,3 +64,12 @@ class Lap(BaseModel):
     model_config = {
         "extra": "forbid",
     }
+
+    # 自定义浮点精度序列化，遵循US-040约定
+    @field_serializer('total_time', 'start_time', 'end_time')
+    def serialize_time(self, v: float, info) -> float:
+        return round(v, 4)
+
+    @field_serializer('start_distance', 'end_distance', 'lap_distance')
+    def serialize_distance(self, v: float, info) -> float:
+        return round(v, 2)

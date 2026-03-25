@@ -103,19 +103,20 @@ def compare_laps(
     """
     对比两个圈，返回对比结果
     包含：总时间差、分段时间差、分段速度差、弯道时间/速度对比
+    所有浮点数字段遵循US-040精度约定
     """
     result = {
         "lap1": {
             "number": lap1.lap_number,
-            "total_time": lap1.total_time,
-            "distance": lap1.lap_distance,
+            "total_time": round(lap1.total_time, 4),
+            "distance": round(lap1.lap_distance, 2),
         },
         "lap2": {
             "number": lap2.lap_number,
-            "total_time": lap2.total_time,
-            "distance": lap2.lap_distance,
+            "total_time": round(lap2.total_time, 4),
+            "distance": round(lap2.lap_distance, 2),
         },
-        "total_time_diff": lap2.total_time - lap1.total_time,
+        "total_time_diff": round(lap2.total_time - lap1.total_time, 4),
         "sector_diff": [],
         "turn_diff": [],
     }
@@ -127,7 +128,7 @@ def compare_laps(
     # 计算整体平均速度差异统计
     min_len = min(len(dist1), len(dist2))
     speed_diff = speed2[:min_len] - speed1[:min_len]
-    result["avg_speed_diff"] = float(np.mean(speed_diff))
+    result["avg_speed_diff"] = round(float(np.mean(speed_diff)), 2)
 
     # 如果有赛道分段，计算分段时间差和平均速度差
     if track is not None and track.sectors is not None:
@@ -142,14 +143,14 @@ def compare_laps(
             result["sector_diff"].append({
                 "sector_id": sector.id,
                 "sector_name": sector.name,
-                "start_distance": sector.start_distance_m,
-                "end_distance": sector.end_distance_m,
-                "time1": t1,
-                "time2": t2,
-                "time_diff": t2 - t1,
-                "avg_speed1": av1,
-                "avg_speed2": av2,
-                "avg_speed_diff": av2 - av1,
+                "start_distance": round(sector.start_distance_m, 2),
+                "end_distance": round(sector.end_distance_m, 2),
+                "time1": round(t1, 4),
+                "time2": round(t2, 4),
+                "time_diff": round(t2 - t1, 4),
+                "avg_speed1": round(av1, 2),
+                "avg_speed2": round(av2, 2),
+                "avg_speed_diff": round(av2 - av1, 2),
             })
 
     # 如果有赛道弯道信息，计算每个弯道的对比
@@ -173,24 +174,24 @@ def compare_laps(
             result["turn_diff"].append({
                 "turn_name": turn.name,
                 "turn_type": turn.type,
-                "start_distance": turn.start_distance_m,
-                "apex_distance": turn.apex_distance_m,
-                "end_distance": turn.end_distance_m,
-                "time1": t1,
-                "time2": t2,
-                "time_diff": t2 - t1,
-                "speed_entry1": se1,
-                "speed_entry2": se2,
-                "speed_entry_diff": se2 - se1,
-                "speed_apex1": ap1,
-                "speed_apex2": ap2,
-                "speed_apex_diff": ap2 - ap1,
-                "speed_exit1": ex1,
-                "speed_exit2": ex2,
-                "speed_exit_diff": ex2 - ex1,
-                "avg_speed1": av1,
-                "avg_speed2": av2,
-                "avg_speed_diff": av2 - av1,
+                "start_distance": round(turn.start_distance_m, 2),
+                "apex_distance": round(turn.apex_distance_m, 2),
+                "end_distance": round(turn.end_distance_m, 2),
+                "time1": round(t1, 4),
+                "time2": round(t2, 4),
+                "time_diff": round(t2 - t1, 4),
+                "speed_entry1": round(se1, 2),
+                "speed_entry2": round(se2, 2),
+                "speed_entry_diff": round(se2 - se1, 2),
+                "speed_apex1": round(ap1, 2),
+                "speed_apex2": round(ap2, 2),
+                "speed_apex_diff": round(ap2 - ap1, 2),
+                "speed_exit1": round(ex1, 2),
+                "speed_exit2": round(ex2, 2),
+                "speed_exit_diff": round(ex2 - ex1, 2),
+                "avg_speed1": round(av1, 2),
+                "avg_speed2": round(av2, 2),
+                "avg_speed_diff": round(av2 - av1, 2),
             })
 
     return result

@@ -11,6 +11,7 @@ US-012: JSON输出支持
 import json
 import click
 from typing import List, Optional
+from wcwidth import wcswidth
 
 from late_brake.io.track_store import (
     list_all_tracks,
@@ -18,6 +19,24 @@ from late_brake.io.track_store import (
     add_track_from_file,
 )
 from late_brake.models import Track
+
+
+def padded(text: str, width: int, align: str = "left") -> str:
+    """
+    按实际显示宽度对齐文本，处理中文字符（每个中文占2宽度）
+    :param text: 原始文本
+    :param width: 目标显示宽度
+    :param align: left/right
+    :return: 对齐后文本
+    """
+    text_width = wcswidth(text)
+    padding_needed = width - text_width
+    if padding_needed <= 0:
+        return text
+    if align == "left":
+        return text + " " * padding_needed
+    else:
+        return " " * padding_needed + text
 
 
 def print_track_list_text(tracks: List[Track]) -> None:
@@ -159,8 +178,9 @@ cli.add_command(track_group)
 @click.argument("data_files", nargs=-1, required=True)
 @click.option("--track", "track_id", default=None, help="手动指定赛道ID")
 @click.option("--json", "output_json", is_flag=True, default=False, help="输出JSON格式")
-@click.option("--force-reload", is_flag=True, default=False, help="强制重新解析，忽略缓存")
-def load_command(data_files, track_id, output_json, force_reload):
+@click.option("--force-reload", "no_cache", is_flag=True, default=False, help="强制重新解析，忽略缓存 (别名: --no-cache)")
+@click.option("--no-cache", "no_cache", is_flag=True, default=False, help="强制重新解析，忽略缓存")
+def load_command(data_files, track_id, output_json, no_cache):
     """加载数据文件，自动匹配赛道并分割圈速，输出圈速列表
 
     解析结果缓存为 .{filename}.lb.json 以供后续对比使用
@@ -186,9 +206,13 @@ def load_command(data_files, track_id, output_json, force_reload):
             "track_name": None,
         }
 
+        # 如果指定 --no-cache，先删除缓存
+        if no_cache:
+            remove_cached_laps(file_path)
+
         # 尝试加载缓存
         cached = None
-        if not force_reload:
+        if not no_cache:
             cached = load_cached_laps(file_path)
 
         if cached is not None:
@@ -312,14 +336,16 @@ def load_command(data_files, track_id, output_json, force_reload):
 @click.argument("lap2", type=int)
 @click.option("--track", "track_id", default=None, help="手动指定赛道ID")
 @click.option("--json", "output_json", is_flag=True, default=False, help="输出JSON格式")
-def compare_command(file1_path, lap1, file2_path, lap2, track_id, output_json):
+@click.option("--force-reload", "no_cache", is_flag=True, default=False, help="强制重新解析，忽略缓存 (别名: --no-cache)")
+@click.option("--no-cache", "no_cache", is_flag=True, default=False, help="强制重新解析，忽略缓存")
+def compare_command(file1_path, lap1, file2_path, lap2, track_id, output_json, no_cache):
     """对比两个文件中的任意两圈
 
     示例: late-brake compare file1.nmea 2 file2.vbo 4
     支持不同格式文件混对比，自动使用缓存
     """
     from late_brake.io.parsers import parse_file
-    from late_brake.io.cache import load_cached_laps
+    from late_brake.io.cache import load_cached_laps, remove_cached_laps, save_cached_laps
     from late_brake.core.matcher import match_track
     from late_brake.io.track_store import get_track_by_id
     from late_brake.core.splitter import split_laps
@@ -328,17 +354,26 @@ def compare_command(file1_path, lap1, file2_path, lap2, track_id, output_json):
 
     def get_laps(file_path: str, track: Track) -> List[Lap]:
         """从缓存或重新解析获取圈速"""
+        # 如果 --no-cache，先删除缓存
+        if no_cache:
+            remove_cached_laps(file_path)
+
         cached = load_cached_laps(file_path)
-        if cached is not None:
-            # 缓存存在，直接反序列化
+        if cached is not None and not no_cache:
+            # 缓存存在且不强制重新加载，直接反序列化
             return [Lap(**lap_data) for lap_data in cached["laps"]]
 
-        # 缓存不存在，重新解析
+        # 缓存不存在或强制重新加载，重新解析
         points = parse_file(file_path)
         if points is None or len(points) == 0:
             return []
 
-        return split_laps(points, track, file_path)
+        laps = split_laps(points, track, file_path)
+        # 保存新缓存
+        if track is not None:
+            save_cached_laps(file_path, laps, track.id)
+
+        return laps
 
     # 获取赛道
     # 如果没指定，尝试从第一个文件缓存获取，或自动匹配
@@ -472,7 +507,18 @@ def compare_command(file1_path, lap1, file2_path, lap2, track_id, output_json):
         if result["sector_diff"]:
             click.echo("分段对比:")
             click.echo()
-            click.echo(f"  {'分段':<15} {'时间(圈1)':>10} {'时间(圈2)':>10} {'时差':>8} {'速度(圈1)':>10} {'速度(圈2)':>10} {'速差':>8}")
+            # 使用padded对齐，处理中文字符宽度
+            header = (
+                "  " +
+                padded("分段", 15, "left") +
+                padded("时间(圈1)", 10, "right") +
+                padded("时间(圈2)", 10, "right") +
+                padded("时差", 8, "right") +
+                padded("速度(圈1)", 10, "right") +
+                padded("速度(圈2)", 10, "right") +
+                padded("速差", 8, "right")
+            )
+            click.echo(header)
             click.echo("  " + "-" * 78)
             for sd in result["sector_diff"]:
                 t1 = sd["time1"]
@@ -482,23 +528,60 @@ def compare_command(file1_path, lap1, file2_path, lap2, track_id, output_json):
                 av2 = sd["avg_speed2"]
                 svd = sd["avg_speed_diff"]
                 name = sd["sector_name"][:12] + ("..." if len(sd["sector_name"]) > 12 else "")
-                click.echo(f"  {name:<15} {t1:>10.3f} {t2:>10.3f} {td:>8.3f} {av1:>10.2f} {av2:>10.2f} {svd:>8.2f}")
+                line = (
+                    "  " +
+                    padded(name, 15, "left") +
+                    padded(f"{t1:.3f}", 10, "right") +
+                    padded(f"{t2:.3f}", 10, "right") +
+                    padded(f"{td:.3f}", 8, "right") +
+                    padded(f"{av1:.2f}", 10, "right") +
+                    padded(f"{av2:.2f}", 10, "right") +
+                    padded(f"{svd:.2f}", 8, "right")
+                )
+                click.echo(line)
             click.echo()
 
         if result["turn_diff"]:
             click.echo("弯道对比:")
             click.echo()
-            click.echo(f"  {'弯道':<6} {'入速1':>8} {'入速2':>8} {'入差':>6} {'心速1':>8} {'心速2':>8} {'心差':>6} {'出速1':>8} {'出速2':>8} {'出差':>6} {'均速1':>8} {'均速2':>8} {'均差':>6} {'时差':>6}")
+            header = (
+                "  " +
+                padded("弯道", 6, "left") +
+                padded("入速1", 8, "right") +
+                padded("入速2", 8, "right") +
+                padded("入差", 6, "right") +
+                padded("心速1", 8, "right") +
+                padded("心速2", 8, "right") +
+                padded("心差", 6, "right") +
+                padded("出速1", 8, "right") +
+                padded("出速2", 8, "right") +
+                padded("出差", 6, "right") +
+                padded("均速1", 8, "right") +
+                padded("均速2", 8, "right") +
+                padded("均差", 6, "right") +
+                padded("时差", 6, "right")
+            )
+            click.echo(header)
             click.echo("  " + "-" * 108)
             for td in result["turn_diff"]:
-                click.echo(
-                    f"  {td['turn_name']:<6} "
-                    f"{td['speed_entry1']:>8.2f} {td['speed_entry2']:>8.2f} {td['speed_entry_diff']:>6.2f} "
-                    f"{td['speed_apex1']:>8.2f} {td['speed_apex2']:>8.2f} {td['speed_apex_diff']:>6.2f} "
-                    f"{td['speed_exit1']:>8.2f} {td['speed_exit2']:>8.2f} {td['speed_exit_diff']:>6.2f} "
-                    f"{td['avg_speed1']:>8.2f} {td['avg_speed2']:>8.2f} {td['avg_speed_diff']:>6.2f} "
-                    f"{td['time_diff']:>6.3f}"
+                line = (
+                    "  " +
+                    padded(td['turn_name'], 6, "left") +
+                    padded(f"{td['speed_entry1']:.2f}", 8, "right") +
+                    padded(f"{td['speed_entry2']:.2f}", 8, "right") +
+                    padded(f"{td['speed_entry_diff']:.2f}", 6, "right") +
+                    padded(f"{td['speed_apex1']:.2f}", 8, "right") +
+                    padded(f"{td['speed_apex2']:.2f}", 8, "right") +
+                    padded(f"{td['speed_apex_diff']:.2f}", 6, "right") +
+                    padded(f"{td['speed_exit1']:.2f}", 8, "right") +
+                    padded(f"{td['speed_exit2']:.2f}", 8, "right") +
+                    padded(f"{td['speed_exit_diff']:.2f}", 6, "right") +
+                    padded(f"{td['avg_speed1']:.2f}", 8, "right") +
+                    padded(f"{td['avg_speed2']:.2f}", 8, "right") +
+                    padded(f"{td['avg_speed_diff']:.2f}", 6, "right") +
+                    padded(f"{td['time_diff']:.3f}", 6, "right")
                 )
+                click.echo(line)
             click.echo()
 
     # 对比总是成功

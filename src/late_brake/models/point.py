@@ -7,6 +7,7 @@ Late Brake - Data Point Model
 """
 
 from pydantic import BaseModel, Field
+from pydantic import field_serializer
 from typing import Optional
 
 
@@ -75,3 +76,28 @@ class DataPoint(BaseModel):
     model_config = {
         "extra": "forbid",  # 禁止额外字段，保持结构严格
     }
+
+    # 自定义浮点精度序列化，遵循US-0040约定
+    @field_serializer('timestamp')
+    def serialize_timestamp(self, v: float, info) -> float:
+        return round(v, 4)
+
+    @field_serializer('latitude', 'longitude')
+    def serialize_latlon(self, v: float, info) -> float:
+        return round(v, 7)
+
+    @field_serializer('speed')
+    def serialize_speed(self, v: float, info) -> float:
+        return round(v, 2)
+
+    @field_serializer('distance')
+    def serialize_distance(self, v: float, info) -> float:
+        return round(v, 2)
+
+    @field_serializer('altitude')
+    def serialize_altitude(self, v: Optional[float], info) -> Optional[float]:
+        return round(v, 2) if v is not None else None
+
+    @field_serializer('g_force_x', 'g_force_y', 'g_force_z', 'steering_angle', 'throttle_position', 'brake_pressure')
+    def serialize_g_and_controls(self, v: Optional[float], info) -> Optional[float]:
+        return round(v, 3) if v is not None else None

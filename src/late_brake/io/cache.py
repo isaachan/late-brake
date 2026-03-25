@@ -50,3 +50,10 @@ def load_cached_laps(source_file: str) -> Optional[dict]:
         return data
     except (json.JSONDecodeError, KeyError):
         return None
+
+
+def remove_cached_laps(source_file: str) -> None:
+    """删除已有缓存，强制下次重新解析"""
+    cache_path = cache_file_path(source_file)
+    if os.path.exists(cache_path):
+        os.remove(cache_path)
