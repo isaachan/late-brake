@@ -1,50 +1,53 @@
-# VBO 格式说明
+# VBO Format Specification
 
-> **Late Brake 项目文档**
+> **Late Brake Project Documentation**
 >
-> 本文档定义 RaceChrono Pro 导出的 VBO 格式文件解析规则，以及到 Late Brake 内部数据格式的映射关系。
-> VBO 是 RaceChrono Pro 导出的文本日志格式，支持GPS+多传感器数据记录。
+> This document defines the parsing rules for VBO format files exported by RaceChrono Pro, and the mapping to Late Brake internal data format.
+> VBO is a text log format exported by RaceChrono Pro, supporting GPS + multi-sensor data logging.
 
-## 1. 文件结构
+## 1. File Structure
 
-VBO 文件是 RaceChrono Pro 导出的文本格式日志，结构如下：
+VBO file is a text log exported by RaceChrono Pro, structured as follows:
 
-1. **文件头**：多行文本描述，包含生成时间、软件版本等信息
-2. **字段定义段**：`[column names]` 之后列出所有数据列名称
-3. **数据段**：`[data]` 之后每行一个数据采样点，空格分割字段
+1. **File Header**: Multiple lines of descriptive text, includes creation time, software version, etc.
+2. **Field Definition Section**: After `[column names]` lists all data column names
+3. **Data Section**: After `[data]` each line is one data sample, fields separated by spaces
 
-解析时需要跳过文件头，找到 `[data]` 段之后开始解析实际数据行。
+When parsing, skip the file header, find the `[data]` section, then start parsing actual data lines.
 
-## 2. 关键字段说明
+## 2. Key Field Description
 
-VBO 使用 `DDMM.NNNNN` 格式存储经纬度，时间使用 `HHMMSS.ss` 格式：
+VBO stores coordinates in `DDMM.NNNNN` format, time in `HHMMSS.ss` format:
 
-| 列名          | 类型   | 说明                                     |
-|---------------|--------|------------------------------------------|
-| `time`        | string | 时间，格式 `HHMMSS.ss`                   |
-| `lat`         | float  | 纬度，格式 `DDMM.NNNNN`，符号表示南北   |
-| `long`        | float  | 经度，格式 `DDMM.NNNNN`，符号表示东西   |
-| `velocity`    | float  | 速度，单位 km/h                          |
+| Column Name | Type | Description |
+|-------------|------|-------------|
+| `time` | string | Time, format `HHMMSS.ss` |
+| `lat` | float | Latitude, format `DDMM.NNNNN`, sign indicates north/south |
+| `long` | float | Longitude, format `DDDMM.NNNNN`, sign indicates east/west |
+| `velocity` | float | Speed, unit km/h |
 
-**其他字段**：VBO 支持很多可选字段（加速度、陀螺仪、OBD 数据等），v1 版本暂不解析，后续迭代可扩展支持。
+**Other Fields**: VBO supports many optional fields (acceleration, gyro, OBD data, etc.), v1 does not parse these yet, can be extended in future iterations.
 
-## 3. 转换规则
+## 3. Conversion Rules
 
-### 3.1 坐标转换
+### 3.1 Coordinate Conversion
 
-原始格式 `DDMM.NNNNN`（纬度），`DDDMM.NNNNN`（经度）：
+Original format: `DDMM.NNNNN` for latitude, `DDDMM.NNNNN` for longitude:
 
-原始格式 `DDMM.NNNN`，转换：lat_dec = abs(lat) / 60，不保留原始符号，统一变为正数
-原始格式 `DDDMM.NNNN`，转换：lon_dec = abs(lon) / 60，不保留原始符号，统一变为正数
- 
-也就是说，直接除以60，且统一成正数。
+Conversion formula:
+```
+Decimal degrees = abs(original value) / 60
+Preserve original sign in final result:
+  - Latitude: positive = North, negative = South
+  - Longitude: positive = East, negative = West
+```
 
-### 3.2 时间转换
+### 3.2 Time Conversion
 
-原始时间 `HHMMSS.ss` 转换为相对时间（相对于第一个数据点）：
+Convert original time `HHMMSS.ss` to relative time (relative to first data point):
 
 ```python
-# 输入示例：053855.06 → 05时 38分 55.06秒
+# Example input: 053855.06 → 05 hours 38 minutes 55.06 seconds
 hours = int(time_str / 10000)
 minutes = int((time_str - hours * 10000) / 100)
 seconds = time_str - hours * 10000 - minutes * 100
@@ -52,24 +55,23 @@ total_seconds = hours * 3600 + minutes * 60 + seconds
 timestamp = total_seconds - start_total_seconds
 ```
 
-### 3.3 距离计算
+### 3.3 Distance Calculation
 
-累计距离使用 GeographicLib 对相邻两点使用测地线公式计算距离并累加，与 NMEA 解析保持一致。
+Cumulative distance is calculated using GeographicLib geodesic formula between adjacent points and accumulated, consistent with NMEA parsing.
 
-## 4. 内部格式映射
+## 4. Internal Format Mapping
 
-| VBO 字段    | 内部字段    | 转换说明                      |
-|-------------|-------------|-------------------------------|
-| time        | timestamp   | 转换为相对时间（秒）          |
-| lat         | latitude    | DDMM.NNNNN → 十进制度         |
-| long        | longitude   | DDMM.NNNNN → 十进制度         |
-| velocity    | speed       | 已经是 km/h，直接使用         |
-| (计算得到)  | distance    | 相邻坐标距离累加，单位米      |
+| VBO Field | Internal Field | Conversion Notes |
+|-----------|----------------|------------------|
+| time | timestamp | Convert to relative time (seconds) |
+| lat | latitude | DDMM.NNNNN → decimal degrees |
+| long | longitude | DDDMM.NNNNN → decimal degrees |
+| velocity | speed | Already in km/h, use directly |
+| (computed) | distance | Accumulate distance between adjacent coordinates, unit meters |
 
-## 5. 错误处理
+## 5. Error Handling
 
-- 跳过 `[data]` 之前的所有行
-- 字段数量不足的行跳过
-- 解析错误（数值转换失败）的行跳过
-- 不崩溃，只跳过坏行
-
+- Skip all lines before `[data]`
+- Skip lines with insufficient number of fields
+- Skip lines with parsing errors (numeric conversion failed)
+- Don't crash, just skip bad lines

@@ -1,81 +1,79 @@
-# 内部数据格式定义
+# Internal Data Format Definition
 
-> **Late Brake 项目文档**
+> **Late Brake Project Documentation**
 >
-> 本文档定义 Late Brake 内部统一的JSON数据结构规范。
-> 所有数据导入模块都必须输出符合本文档规范的JSON，后续分析模块依赖统一格式处理。
+> This document defines the unified JSON data structure specification for Late Brake internal usage.
+> All data import modules must output JSON conforming to this specification, and downstream analysis modules depend on this unified format for processing.
 
-本文档定义 Late Brake 内部统一的JSON数据结构规范。
+This document defines the unified JSON data structure specification for Late Brake internal usage.
 
-## 1. 数据点结构
+## 1. Data Point Structure
 
-每个数据点包含赛道上某个采样时刻的所有信息：
-
-```json
-{
-  "timestamp": float,    // 相对时间（秒），从记录开始计算
-  "latitude": float,     // 纬度 (WGS84)
-  "longitude": float,    // 经度 (WGS84)
-  "altitude": float,     // 海拔高度 (米)，可选字段
-  "speed": float,        // 瞬时速度 (km/h)
-  "distance": float,     // 累计距离（米），从数据记录开始计算
-  "g_force_x": float,    // 横向G值 (左右方向，左正右负)，可选字段
-  "g_force_y": float,    // 纵向G值 (前后方向，正为加速，负为刹车)，可选字段
-  "g_force_z": float,    // 垂直G值，可选字段
-  "steering_angle": float, // 方向盘角度 (度)，可选字段，左负右正
-  "throttle_position": float, // 油门开合度 (0-100%)，可选字段
-  "brake_pressure": float,    // 刹车压力 (0-100%)，可选字段
-  "rpm": int,                 // 发动机转速 (RPM)，可选字段
-  "gear": int,                // 当前档位，0=N，1-...=档位，可选字段
-}
-```
-
-**说明**：
-- 必填字段：`timestamp`, `latitude`, `longitude`, `speed`, `distance`
-- 可选字段：根据数据源提供的信息而定，如果数据源没有则留空或不包含该字段
-- G值说明：参考行业标准，横向G值反映离心力，纵向G值反映加速/刹车力度
-- 单位统一：所有单位采用公制，速度统一为km/h，角度为度，百分比0-100%
-
-## 2. 单圈（Lap）数据结构
+Each data point contains all information for a specific sampling moment on the track:
 
 ```json
 {
-  "id": string,              // Lap ID (如 "file1.Lap1")
-  "source_file": string,     // 源文件路径
-  "lap_number": int,         // 圈号
-  "total_time": float,       // 总圈时（秒）
-  "start_time": float,       // 单圈起始时间（秒，相对于整个数据记录开始）
-  "end_time": float,         // 单圈结束时间（秒，相对于整个数据记录开始）
-  "start_distance": float,   // 起始点累计距离（米，相对于整个数据记录开始）
-  "end_distance": float,     // 结束点累计距离（米，相对于整个数据记录开始）
-  "is_complete": bool,       // 是否为完整圈。true = 通过起跑线完整绕一圈，false = 半路出发/半路结束，不完整
-  "lap_distance": float,     // 单圈实际行驶距离（米）= end_distance - start_distance
-  "points": array,           // 数据点数组，包含圈中所有采样点
+  "timestamp": float,    // Relative time (seconds), counted from the start of recording
+  "latitude": float,     // Latitude (WGS84)
+  "longitude": float,    // Longitude (WGS84)
+  "altitude": float,     // Altitude (meters), optional field
+  "speed": float,        // Instantaneous speed (km/h)
+  "distance": float,     // Cumulative distance (meters), counted from the start of recording
+  "g_force_x": float,    // Lateral G-force (left-positive, right-negative), optional field
+  "g_force_y": float,    // Longitudinal G-force (positive = acceleration, negative = braking), optional field
+  "g_force_z": float,    // Vertical G-force, optional field
+  "steering_angle": float, // Steering wheel angle (degrees), optional field, negative = left, positive = right
+  "throttle_position": float, // Throttle position (0-100%), optional field
+  "brake_pressure": float,    // Brake pressure (0-100%), optional field
+  "rpm": int,                 // Engine RPM (RPM), optional field
+  "gear": int,                // Current gear, 0 = neutral, 1-... = gear number, optional field
 }
 ```
 
-**字段说明**：
+**Notes:**
+- Required fields: `timestamp`, `latitude`, `longitude`, `speed`, `distance`
+- Optional fields: Depends on what the data source provides. If the data source doesn't have the data, leave it empty or omit the field
+- G-force explanation: Following industry standards, lateral G-force reflects centrifugal force, longitudinal G-force reflects acceleration/braking force
+- Unit consistency: All units use metric system, speed in km/h, angle in degrees, percentage in 0-100%
 
-- `start_time` / `end_time`：记录单圈在整个数据记录中的绝对时间位置，便于后续处理和分段分析
-- `is_complete`：标记该圈是否完整。数据文件开始前已经在赛道上行驶，或者数据文件结束时还没完成一圈，这两种情况都是不完整圈
-- `start_distance` / `end_distance`：**保留该字段**，用途如下：
-  1. 计算单圈实际距离 `lap_distance = end_distance - start_distance`，验证赛道长度
-  2. 在整条数据记录中定位该圈的位置，便于切割提取
-  3. 处理多圈连续记录时，可以通过距离快速找到圈的起止点
-  4. 不同单圈之间的距离对比，帮助发现走线长度差异
-- `lap_distance`：新增计算字段，直接给出单圈行驶距离，方便使用
+## 2. Lap Data Structure
 
-## 3. 浮点精度约定
+```json
+{
+  "id": string,              // Lap ID (e.g. "file1.Lap1")
+  "source_file": string,     // Source file path
+  "lap_number": int,         // Lap number
+  "total_time": float,       // Total lap time (seconds)
+  "start_time": float,       // Lap start time (seconds, relative to the start of the entire recording)
+  "end_time": float,         // Lap end time (seconds, relative to the start of the entire recording)
+  "start_distance": float,   // Start cumulative distance (meters, relative to the start of the entire recording)
+  "end_distance": float,     // End cumulative distance (meters, relative to the start of the entire recording)
+  "is_complete": bool,       // Is this a complete lap. true = completed a full lap crossing start/finish, false = started mid-track / ended mid-track, incomplete
+  "lap_distance": float,     // Actual lap driving distance (meters) = end_distance - start_distance
+  "points": array,           // Array of data points, contains all sampling points in the lap
+}
+```
 
-JSON 输出中，浮点数按照以下规则保留小数位数，在不影响分析精度的前提下减小文件体积、提高可读性：
+**Field Description:**
 
-| 字段类别                         | 保留小数 | 示例                 |
-|----------------------------------|----------|----------------------|
-| 时间相关 (`timestamp`, `total_time`, `start_time`, `end_time`) | 4        | `68.9500`           |
-| 距离相关 (`distance`, `lap_distance`, `start_distance`, `end_distance`) | 2 | `1985.60` |
-| 经纬度 (`latitude`, `longitude`) | 7        | `31.0794723`        |
-| 速度 (`speed`)                   | 2        | `68.90`             |
-| G值/控制量 (`g_force_x/y/z`, `steering_angle`, `throttle_position`, `brake_pressure`) | 3 | `0.123` |
-| 其他浮点字段                     | 3        | —                    |
+- `start_time` / `end_time`: Records the absolute time position of the lap within the entire data recording, facilitates subsequent processing and sector analysis
+- `is_complete`: Marks whether the lap is complete. If the recording started when the car was already on track, or ended before the lap was completed, it's considered incomplete
+- `start_distance` / `end_distance`: **Keep this field** for the following reasons:
+  1. Calculate actual lap distance `lap_distance = end_distance - start_distance`, verify track length
+  2. Locate the lap position within the entire data recording, facilitates cutting and extraction
+  3. When processing consecutive multi-lap recordings, quickly find lap start/end points by distance
+  4. Compare distances between different laps helps discover differences in racing line length
+- `lap_distance`: New computed field directly gives lap driving distance for convenience
 
+## 3. Floating Point Precision Convention
 
+In JSON output, floating point numbers retain decimal places according to the following rules to reduce file size and improve readability without affecting analysis accuracy:
+
+| Field Category | Decimal Places | Example |
+|----------------|----------------|---------|
+| Time related (`timestamp`, `total_time`, `start_time`, `end_time`) | 4 | `68.9500 |
+| Distance related (`distance`, `lap_distance`, `start_distance`, `end_distance`) | 2 | `1985.60 |
+| Coordinates (`latitude`, `longitude`) | 7 | `31.0794723 |
+| Speed (`speed`) | 2 | `68.90` |
+| G-forces / Controls (`g_force_x/y/z`, `steering_angle`, `throttle_position`, `brake_pressure`) | 3 | `0.123` |
+| Other floating point fields | 3 | — |

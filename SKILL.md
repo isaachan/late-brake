@@ -1,7 +1,7 @@
 ---
 name: late-brake
 version: 1.0.0
-description: 纯CLI赛车圈速数据分析工具，支持NMEA/VBO格式导入，自动分割圈速，对比两圈差异，输出专业对比数据供AI教练分析。Use when you need to analyze racing lap data files, compare two laps, and get structured comparison results.
+description: Pure CLI racing lap data analysis tool. Supports NMEA/VBO import, auto lap splitting, lap comparison, outputs structured comparison results for AI coaching. Use when you need to analyze racing lap data files, compare two laps, and get structured comparison results.
 metadata:
   openclaw:
     requires:
@@ -15,24 +15,24 @@ metadata:
         - wcwidth>=0.2.0
 ---
 
-# Late Brake - 赛车圈速数据分析skill
+# Late Brake - Racing Lap Data Analysis Skill
 
-Late Brake 是一个纯命令行（CLI）的赛车圈速数据分析工具，可以：
-- 导入NMEA 0183 / RaceChrono VBO格式圈速数据
-- 自动根据赛道起终点线分割单圈
-- 对比任意两个圈的圈速、分段、弯道差异
-- 输出结构化JSON对比结果，可供AI教练进一步分析
+Late Brake is a pure command-line (CLI) racing lap data analysis tool that provides:
+- Import lap data in NMEA 0183 / RaceChrono VBO formats
+- Auto split laps based on track start/finish line
+- Compare any two laps for time/speed differences by sector and corner
+- Output structured JSON comparison results ready for AI coach analysis
 
-## 依赖
+## Dependencies
 
 - Python >= 3.10
-- 依赖包：click, pydantic, numpy, geographiclib, jsonschema, wcwidth
+- Dependencies: click, pydantic, numpy, geographiclib, jsonschema, wcwidth
 
-依赖已声明在 SKILL.md 中，OpenClaw 安装时会自动处理。
+Dependencies are declared in SKILL.md, OpenClaw will handle automatic installation.
 
-## 入口命令
+## Entry Points
 
-源码直接放在 `scripts/` 目录，可以直接调用：
+Source code is directly in `scripts/` directory, can be imported directly:
 
 ```python
 import sys
@@ -42,30 +42,30 @@ sys.path.insert(0, os.path.join(SKILL_DIR, "scripts"))
 from late_brake.cli import main as late_brake_main
 ```
 
-或作为命令行直接执行：
+Or execute directly as command-line:
 
 ```bash
-# 加载数据文件，列出所有圈
+# Load data file, list all laps
 python -m late_brake.cli load <file> --json
 
-# 对比两圈，输出JSON结果
+# Compare two laps, output JSON result
 python -m late_brake.cli compare <file1> <lap1> <file2> <lap2> --json
 ```
 
-## 功能列表
+## Features
 
-| 功能 | 命令 | 说明 |
-|------|------|------|
-| 加载数据文件 | `late-brake load <file>` | 解析数据，自动分割圈，列出所有圈 |
-| 对比两圈 | `late-brake compare <file1> <lap1> <file2> <lap2>` | 对比两圈差异，输出文本表格或JSON |
-| 赛道管理 | `late-brake track list/info/add` | 管理内置/自定义赛道 |
+| Feature | Command | Description |
+|---------|---------|-------------|
+| Load data file | `late-brake load <file>` | Parse data, auto split laps, list all detected laps |
+| Compare two laps | `late-brake compare <file1> <lap1> <file2> <lap2>` | Compare lap differences, output text table or JSON |
+| Track management | `late-brake track list/info/add` | Manage built-in/custom tracks |
 
-## JSON输出格式
+## JSON Output Schema
 
-完整schema定义参见 [compare-json-schema.md](references/compare-json-schema.md)
+Full JSON schema definition: [compare-json-schema.md](references/compare-json-schema.md)
 
-## 适用场景
+## Use Cases
 
-- 赛车手上传圈速数据文件，需要对比分析
-- AI赛车教练需要结构化对比数据给出建议
-- 批量处理多个圈速数据文件
+- Racing drivers upload lap data files for comparison analysis
+- AI racing coach needs structured comparison data to give advice
+- Batch processing multiple lap data files

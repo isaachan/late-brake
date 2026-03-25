@@ -1,27 +1,27 @@
-# Late Brake - 赛道数据格式定义
+# Late Brake - Track Data Format Definition
 
-> **Late Brake 项目文档**
+> **Late Brake Project Documentation**
 >
-> 本文档定义 Late Brake 赛道元数据的JSON格式规范。
-> Late Brake 使用独立的JSON文件存储赛道信息，支持内置赛道和用户自定义赛道。
+> This document defines the JSON format specification for track metadata in Late Brake.
+> Late Brake uses independent JSON files to store track information, supporting both built-in tracks and user custom tracks.
 
-## 概述
+## Overview
 
-赛道分析严重依赖赛道元数据。Late Brake 采用独立的JSON文件存储赛道信息，支持内置赛道和用户自定义赛道。
+Track analysis heavily depends on track metadata. Late Brake uses independent JSON files to store track information, supporting both built-in tracks and user custom tracks.
 
-## 赛道文件存放位置规范
+## Track File Location Convention
 
-- **内置赛道**：存放在安装目录 `data/tracks/` 下
-- **用户自定义赛道**：默认存放在 `~/.late-brake/tracks/` 目录
-- **每个赛道对应一个独立的JSON文件**，文件名格式：`{track-id}.json`
+- **Built-in tracks**: Stored under `data/tracks/` in installation directory
+- **User custom tracks**: Default location is `~/.late-brake/tracks/` directory
+- **Each track corresponds to one independent JSON file**, filename format: `{track-id}.json`
 
-## 赛道文件JSON结构定义
+## Track File JSON Structure Definition
 
 ```json
 {
   "id": "saic",
   "name": "Shanghai International Circuit",
-  "full_name": "上海国际赛车场",
+  "full_name": "Shanghai International Circuit",
   "location": "Shanghai, China",
   "length_m": 5451,
   "turn_count": 16,
@@ -96,41 +96,41 @@
 }
 ```
 
-## 字段说明
+## Field Description
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `id` | string | 是 | 赛道唯一标识 |
-| `name` | string | 是 | 赛道英文名称 |
-| `full_name` | string | 否 | 赛道完整名称（含中文） |
-| `location` | string | 否 | 赛道地理位置 |
-| `length_m` | number | 是 | 赛道总长度（米） |
-| `turn_count` | number | 是 | 弯道总数 |
-| `anchor` | object | 是 | 赛道锚点，用于GPS数据匹配 |
-| `anchor.lat` | number | 是 | 锚点纬度 |
-| `anchor.lon` | number | 是 | 锚点经度 |
-| `anchor.radius_m` | number | 是 | 赛道范围半径 |
-| `gate` | array | 是 | 起终点线两个GPS坐标，定义一条线 |
-| `geofence` | array | 否 | 赛道边界GPS坐标点数组 |
-| `centerline` | array | 是 | 赛道中心线GPS坐标点数组（按行驶顺序） |
-| `sectors` | array | 否 | 赛道分段信息 |
-| `turns` | array | 否 | 每个弯道的详细信息 |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Unique track identifier |
+| `name` | string | Yes | Track English name |
+| `full_name` | string | No | Full track name (can include locale name) |
+| `location` | string | No | Track geographic location |
+| `length_m` | number | Yes | Total track length (meters) |
+| `turn_count` | number | Yes | Total number of corners |
+| `anchor` | object | Yes | Track anchor for GPS data matching |
+| `anchor.lat` | number | Yes | Anchor latitude |
+| `anchor.lon` | number | Yes | Anchor longitude |
+| `anchor.radius_m` | number | Yes | Track search radius (meters) |
+| `gate` | array | Yes | Two GPS coordinates defining start/finish line |
+| `geofence` | array | No | Track boundary GPS coordinate array |
+| `centerline` | array | Yes | Track centerline GPS coordinate array (in driving order) |
+| `sectors` | array | No | Track sector information |
+| `turns` | array | No | Detailed information for each corner |
 
-## 新增字段说明
+## New Field Description
 
-### 赛道分段（sectors）
-- `id`: 分段ID
-- `name`: 分段名称
-- `start_distance_m`: 分段起点距离赛道起点的距离（米）
-- `end_distance_m`: 分段终点距离赛道起点的距离（米）
-- `turns`: 该分段包含的弯道编号列表
+### Track Sectors (sectors)
+- `id`: Sector ID
+- `name`: Sector name
+- `start_distance_m`: Distance from track start to sector start (meters)
+- `end_distance_m`: Distance from track start to sector end (meters)
+- `turns`: List of corner numbers included in this sector
 
-### 弯道信息（turns）
-- `name`: 弯道名称（通常为 T{编号}）
-- `type`: 弯道类型：`left`/`right`/`left-right`/`right-left` 等
-- `start_distance_m`: 弯道起点距离（从赛道起点开始计算，米）
-- `apex_distance_m`: 弯心距离（从赛道起点到弯心的距离，米）
-- `apex_coordinates`: 弯心顶点GPS坐标，`[纬度, 经度]`
-- `end_distance_m`: 弯道终点距离
-- `radius_m`: 弯道半径（米），复合弯道可留空
-- `min_speed_target`: 弯心最低目标时速（公里/小时，V-min），弯心最低速度比最高速度更具驾驶参考意义
+### Corner Information (turns)
+- `name`: Corner name (usually T{number})
+- `type`: Corner type: `left`/`right`/`left-right`/`right-left` etc.
+- `start_distance_m`: Distance from track start to corner entry (meters)
+- `apex_distance_m`: Distance from track start to apex (meters)
+- `apex_coordinates`: Apex GPS coordinates, `[latitude, longitude]`
+- `end_distance_m`: Distance from track start to corner exit
+- `radius_m`: Corner radius (meters), leave empty for complex corners
+- `min_speed_target`: Minimum target speed at apex (km/h, V-min). Minimum apex speed is more useful for driving reference than maximum speed
