@@ -1,5 +1,10 @@
 # compare 命令 JSON 输出 Schema 定义
 
+> **Late Brake 项目文档**
+>
+> 本文档完整定义 `late-brake compare` 命令使用 `--json` 参数输出的 JSON 结构。
+> 这个定义用于给 LLM 分析对比结果提供清晰的 schema 参考，确保 LLM 能正确理解每个字段含义。
+
 本文档完整定义 `late-brake compare` 命令使用 `--json` 参数输出的 JSON 结构。
 
 ## 1. 顶层结构
