@@ -36,6 +36,7 @@ echo "✅ Copied references/"
 mkdir -p "$DIST/scripts"
 cp -r "$ROOT/src/"* "$DIST/scripts/"
 find "$DIST/scripts/" -name "*.pyc" -delete
+rm -rf "$DIST/scripts/late_brake.egg-info"
 echo "✅ Copied source to scripts/"
 
 # Verify package
