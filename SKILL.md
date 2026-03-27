@@ -1,6 +1,6 @@
 ---
 name: late-brake
-version: 1.0.0
+version: 0.0.2
 description: Pure CLI racing lap data analysis tool. Supports NMEA/VBO import, auto lap splitting, lap comparison, outputs structured comparison results for AI coaching. Use when you need to analyze racing lap data files, compare two laps, and get structured comparison results.
 metadata:
   openclaw:
