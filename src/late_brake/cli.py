@@ -186,7 +186,7 @@ def load_command(data_files, track_id, output_json, no_cache):
     解析结果缓存为 .{filename}.lb.json 以供后续对比使用
     """
     from late_brake.io.parsers import parse_file
-    from late_brake.io.cache import save_cached_laps, load_cached_laps
+    from late_brake.io.cache import save_cached_laps, load_cached_laps, remove_cached_laps
     from late_brake.core.matcher import match_track
     from late_brake.io.track_store import get_track_by_id
     from late_brake.core.splitter import split_laps
