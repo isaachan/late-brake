@@ -341,3 +341,88 @@ def test_validate_turn_with_all_new_fields():
         assert turn2.min_speed_target == 80.0
     finally:
         os.unlink(tmp_path)
+
+
+# Tests for US-046: path traversal vulnerability fix
+from late_brake.io.track_store import add_track_from_file, get_user_track_dir
+
+
+def test_add_track_id_with_path_traversal():
+    """测试：track.id 包含路径遍历字符 ../ 应该被拒绝"""
+    malicious_track = {
+        "id": "../../../etc/passwd",
+        "name": "Malicious",
+        "length_m": 1000.0,
+        "turn_count": 5,
+        "anchor": {"lat": 31.0, "lon": 121.0, "radius_m": 1000.0},
+        "gate": [[31.0, 121.0], [31.1, 121.1]],
+        "centerline": [[31.0, 121.0], [31.1, 121.1], [31.2, 121.2]]
+    }
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(malicious_track, f)
+        tmp_path = f.name
+
+    try:
+        valid, err, track = add_track_from_file(tmp_path)
+        assert not valid
+        assert track is None
+        assert ("包含非法字符" in err or "生成路径非法" in err)
+    finally:
+        os.unlink(tmp_path)
+
+
+def test_add_track_id_with_slashes():
+    """测试：track.id 包含斜杠应该被拒绝"""
+    malicious_track = {
+        "id": "bad/id",
+        "name": "Malicious",
+        "length_m": 1000.0,
+        "turn_count": 5,
+        "anchor": {"lat": 31.0, "lon": 121.0, "radius_m": 1000.0},
+        "gate": [[31.0, 121.0], [31.1, 121.1]],
+        "centerline": [[31.0, 121.0], [31.1, 121.1], [31.2, 121.2]]
+    }
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(malicious_track, f)
+        tmp_path = f.name
+
+    try:
+        valid, err, track = add_track_from_file(tmp_path)
+        assert not valid
+        assert track is None
+        assert "包含非法字符" in err
+    finally:
+        os.unlink(tmp_path)
+
+
+def test_add_track_id_with_valid_characters():
+    """测试：合法 track.id （字母数字下划线横杠）应该通过"""
+    valid_track = {
+        "id": "my_valid_track_123-abc",
+        "name": "Valid Track",
+        "length_m": 1000.0,
+        "turn_count": 5,
+        "anchor": {"lat": 31.0, "lon": 121.0, "radius_m": 1000.0},
+        "gate": [[31.0, 121.0], [31.1, 121.1]],
+        "centerline": [[31.0, 121.0], [31.1, 121.1], [31.2, 121.2]]
+    }
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(valid_track, f)
+        tmp_path = f.name
+
+    try:
+        valid, err, track = add_track_from_file(tmp_path)
+        assert valid
+        assert track is not None
+        assert track.id == "my_valid_track_123-abc"
+        # Verify the file was created in the correct directory
+        user_dir = get_user_track_dir()
+        expected_path = os.path.join(user_dir, f"{track.id}.json")
+        assert os.path.exists(expected_path)
+    finally:
+        # Cleanup
+        user_dir = get_user_track_dir()
+        expected_path = os.path.join(user_dir, "my_valid_track_123-abc.json")
+        if os.path.exists(expected_path):
+            os.unlink(expected_path)
+        os.unlink(tmp_path)

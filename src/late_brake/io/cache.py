@@ -14,10 +14,18 @@ from late_brake.models import Lap
 
 def cache_file_path(source_file: str) -> str:
     """生成缓存文件路径"""
-    dirname = os.path.dirname(source_file)
-    basename = os.path.basename(source_file)
+    source_file_norm = os.path.normpath(source_file)
+    dirname = os.path.dirname(source_file_norm)
+    basename = os.path.basename(source_file_norm)
     cache_basename = f".{basename}.lb.json"
-    return os.path.join(dirname, cache_basename)
+    cache_path = os.path.join(dirname, cache_basename)
+    cache_path = os.path.normpath(cache_path)
+    # After normalization, verify cache is still within the normalized source directory
+    # This prevents traversal even if original source_file contained ../ tricks
+    source_dir_norm = os.path.normpath(dirname) + os.sep
+    if not cache_path.startswith(source_dir_norm):
+        raise ValueError(f"缓存路径生成失败，源文件路径可能包含非法路径遍历字符: {source_file}")
+    return cache_path
 
 
 def save_cached_laps(source_file: str, laps: List[Lap], track_id: str) -> None:

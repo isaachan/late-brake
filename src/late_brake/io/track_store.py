@@ -11,10 +11,15 @@ Late Brake - Track Storage Management
 
 import os
 import json
+import re
 from typing import List, Dict, Optional, Tuple
 from jsonschema import validate, ValidationError
 
 from late_brake.models import Track
+
+
+# Track ID validation: only allow alphanumeric, underscore, hyphen
+TRACK_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
 
 
 # JSON Schema for track validation (based on track-format.md)
@@ -194,7 +199,7 @@ def validate_track_file(path: str) -> Tuple[bool, Optional[str], Optional[Track]
         return False, f"加载失败: {str(e)}", None
 
 
-def add_track_from_file(source_path: str) -> Tuple[bool, str, Track]:
+def add_track_from_file(source_path: str) -> Tuple[bool, str, Optional[Track]]:
     """添加或更新用户自定义赛道
     返回 (是否成功, 消息, Track 对象)
     """
@@ -202,10 +207,18 @@ def add_track_from_file(source_path: str) -> Tuple[bool, str, Track]:
     if not valid or track is None:
         return False, err_msg, None  # type: ignore
 
+    # Validate track.id against allowed pattern
+    if not TRACK_ID_PATTERN.fullmatch(track.id):
+        return False, f"赛道ID '{track.id}' 包含非法字符，只允许字母、数字、下划线(_)和横杠(-)", None
+
     user_dir = get_user_track_dir()
     os.makedirs(user_dir, exist_ok=True)
 
     dest_path = os.path.join(user_dir, f"{track.id}.json")
+    # Normalize and verify path is still within user track directory (prevent path traversal)
+    dest_path = os.path.normpath(dest_path)
+    if not dest_path.startswith(os.path.normpath(user_dir) + os.sep):
+        return False, f"赛道ID '{track.id}' 生成路径非法，可能包含路径遍历字符", None
 
     with open(dest_path, "w", encoding="utf-8") as f:
         json.dump(track.model_dump(), f, indent=2, ensure_ascii=False)
