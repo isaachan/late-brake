@@ -17,7 +17,7 @@ metadata:
 
 # Late Brake
 
-CLI racing lap data analysis: import NMEA/VBO, auto-split laps, compare laps, output structured JSON for AI coaching.
+CLI for NMEA/VBO lap analysis and JSON coaching output.
 
 ## Import
 
@@ -31,14 +31,12 @@ from late_brake.cli import main as late_brake_main
 ## CLI
 
 ```bash
-python -m late_brake.cli load <file> --json                     # parse & list laps
-python -m late_brake.cli compare <f1> <l1> <f2> <l2> --json     # compare two laps
+python -m late_brake.cli load <file> --json
+python -m late_brake.cli compare <f1> <l1> <f2> <l2> --json
 ```
 
-| Command | Description |
-|---------|-------------|
-| `late-brake load <file>` | Parse file, auto-split laps, list detected laps |
-| `late-brake compare <f1> <l1> <f2> <l2>` | Compare lap time/speed differences |
-| `late-brake track list/info/add` | Manage built-in/custom tracks |
+- `late-brake load <file>`: parse file, split laps, list laps
+- `late-brake compare <f1> <l1> <f2> <l2>`: compare lap time and speed deltas
+- `late-brake track list|info|add`: manage tracks
 
-JSON schema: [compare-json-schema.md](references/compare-json-schema.md)
+Schema: [compare-json-schema.md](references/compare-json-schema.md)
